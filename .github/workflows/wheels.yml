@@ -3,50 +3,55 @@ name: Wheels
 on:
   workflow_dispatch:
   pull_request:
-  push:
-    branches:
-     - master
   release:
     types:
       - published
 
 jobs:
-  build_sdist:
-    name: Build SDist
+
+  get_llvm_project_commit:
+
+    name: Get latest LLVM commit
+
     runs-on: ubuntu-latest
+    outputs:
+      LLVM_PROJECT_COMMIT: ${{ steps.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-
-    - name: Build SDist
-      run: pipx run build --sdist
-
-    - name: Check metadata
-      run: pipx run twine check dist/*
-
-    - uses: actions/upload-artifact@v3
-      with:
-        path: dist/*.tar.gz
-
+      - name: Get llvm-project commit
+        id: get_llvm_project_commit
+        run: |
+          if [ x"${{ inputs.llvm_commit }}" == x"" ]; then
+            sudo apt install jq
+            LLVM_PROJECT_COMMIT=$(curl -s https://api.github.com/repos/llvm/llvm-project/commits/main | jq -r '.sha[:8]')
+          else
+            LLVM_PROJECT_COMMIT="${{ inputs.llvm_commit }}"
+          fi
+          echo "LLVM_PROJECT_COMMIT=${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
 
   build_wheels:
+
     name: Wheels on ${{ matrix.os }}
+
+    needs: get_llvm_project_commit
+
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
+    outputs:
+      LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
 
     steps:
     - uses: actions/checkout@v3
-      with:
-        submodules: true
+
+    - name: Get LLVM
+      shell: bash
+      run: |
+        curl https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
+        unzip llvm.zip -d llvm-project
 
     - uses: pypa/cibuildwheel@v2.13.0
-      env:
-        CIBW_ARCHS_MACOS: auto universal2
-        CIBW_PRERELEASE_PYTHONS: "1"
 
     - name: Verify clean directory
       run: git diff --exit-code
@@ -56,24 +61,52 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         path: wheelhouse/*.whl
+        name: build_artifact
 
+  upload_wheels:
 
-  upload_all:
-    name: Upload if release
-    needs: [build_wheels, build_sdist]
+    name: Upload wheels
+
+    needs: [build_wheels]
+
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
-
+#    environment: pypi
+#    if: github.event_name == 'release' && github.event.action == 'published'
+    permissions:
+      id-token: write
+      contents: write
     steps:
-    - uses: actions/setup-python@v4
-      with:
-        python-version: "3.x"
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: build_artifact
+          path: dist
 
-    - uses: actions/download-artifact@v3
-      with:
-        name: artifact
-        path: dist
+      - name: Set up a release page
+        id: setup_release
+        run: |
+          LLVM_PROJECT_COMMIT="${{ needs.build.outputs.LLVM_PROJECT_COMMIT }}"
+          echo "Created at $(date) build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
+          echo "tag_name=llvm-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
+          echo "release_title=llvm-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
 
-    - uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.pypi_password }}
+      - name: Release current commit
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*.whl"
+          bodyFile: body.md
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          tag: "${{ steps.setup_release.outputs.tag_name }}"
+          name: "${{ steps.setup_release.outputs.release_title }}"
+          removeArtifacts: false
+          allowUpdates: true
+          replacesArtifacts: true
+
+#      - uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          repository-url: https://test.pypi.org/legacy/
+#          user: __token__
+#          password: ${{ secrets.test_pypi_password }}
+#          skip-existing: true
+#          verbose: true

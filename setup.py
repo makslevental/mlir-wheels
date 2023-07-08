@@ -45,8 +45,32 @@ class CMakeBuild(build_ext):
         # EXAMPLE_VERSION_INFO shows you how to pass a value into the C++ code
         # from Python.
         cmake_args = [
+            "-DBUILD_SHARED_LIBS=OFF",
+            "-DLLVM_BUILD_BENCHMARKS=OFF",
+            "-DLLVM_BUILD_EXAMPLES=OFF",
+            "-DLLVM_BUILD_RUNTIMES=OFF",
+            "-DLLVM_BUILD_TESTS=OFF",
+            "-DLLVM_BUILD_TOOLS=ON",
+            "-DLLVM_BUILD_UTILS=ON",
+            "-DLLVM_CCACHE_BUILD=ON",
+            "-DLLVM_ENABLE_ASSERTIONS=ON",
+            "-DLLVM_ENABLE_PROJECTS=mlir",
+            "-DLLVM_ENABLE_RTTI=ON",
+            "-DLLVM_ENABLE_ZSTD=OFF",
+            "-DLLVM_INCLUDE_BENCHMARKS=OFF",
+            "-DLLVM_INCLUDE_EXAMPLES=OFF",
+            "-DLLVM_INCLUDE_RUNTIMES=OFF",
+            "-DLLVM_INCLUDE_TESTS=OFF",
+            "-DLLVM_INCLUDE_TOOLS=ON",
+            "-DLLVM_INCLUDE_UTILS=ON",
+            "-DLLVM_INSTALL_UTILS=ON",
+            "-DMLIR_BUILD_MLIR_C_DYLIB=1",
+            "-DMLIR_ENABLE_BINDINGS_PYTHON=ON",
+            "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
+            "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
+            f"-DCMAKE_INSTALL_PREFIX={extdir}/llvm",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
-            f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
         build_args = []
@@ -54,9 +78,6 @@ class CMakeBuild(build_ext):
         # (needed e.g. to build for ARM OSx on conda-forge)
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
-
-        # In this example, we pass in the version to C++. You might not need to.
-        cmake_args += [f"-DEXAMPLE_VERSION_INFO={self.distribution.get_version()}"]
 
         if self.compiler.compiler_type != "msvc":
             # Using Ninja-build since it a) is available as a wheel and b)
@@ -97,6 +118,7 @@ class CMakeBuild(build_ext):
                 build_args += ["--config", cfg]
 
         if sys.platform.startswith("darwin"):
+            cmake_args += ["-DCMAKE_OSX_DEPLOYMENT_TARGET=11.6"]
             # Cross-compile support for macOS - respect ARCHFLAGS if set
             archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
             if archs:
@@ -119,22 +141,23 @@ class CMakeBuild(build_ext):
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
         subprocess.run(
-            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
+            ["cmake", "--build", ".", "--target", "install", *build_args],
+            cwd=build_temp,
+            check=True,
         )
 
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-    name="cmake_example",
+    name="mlir",
     version="0.0.1",
-    author="Dean Moldovan",
-    author_email="dean0x7d@gmail.com",
-    description="A test project using pybind11 and CMake",
+    author="",
+    author_email="",
+    description="",
     long_description="",
-    ext_modules=[CMakeExtension("cmake_example")],
+    ext_modules=[CMakeExtension("llvm", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.7",
+    python_requires=">=3.11",
 )
