@@ -1,49 +1,64 @@
 import os
+import platform
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+from pprint import pprint
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
-# Convert distutils Windows platform specifiers to CMake -A arguments
-PLAT_TO_CMAKE = {
-    "win32": "Win32",
-    "win-amd64": "x64",
-    "win-arm32": "ARM",
-    "win-arm64": "ARM64",
-}
 
-
-# A CMakeExtension needs a sourcedir instead of a file list.
-# The name must be the _single_ output extension from the CMake build.
-# If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
     def __init__(self, name: str, sourcedir: str = "") -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
 
 
+def get_cross_cmake_args():
+    cmake_args = {}
+
+    CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
+    if CIBW_ARCHS in {"arm64", "aarch64", "ARM64"}:
+        ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "AArch64"
+    elif CIBW_ARCHS in {"x86_64", "AMD64"}:
+        ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "X86"
+    else:
+        raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
+    if CIBW_ARCHS != platform.machine():
+        # cmake_args["LLVM_USE_HOST_TOOLS"] = "ON"
+        cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
+
+    if platform.system() == "Darwin":
+        if ARCH == "AArch64":
+            cmake_args["CMAKE_OSX_ARCHITECTURES"] = "arm64"
+            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "arm64-apple-darwin21.6.0"
+            cmake_args["LLVM_HOST_TRIPLE"] = "arm64-apple-darwin21.6.0"
+        elif ARCH == "X86":
+            cmake_args["CMAKE_OSX_ARCHITECTURES"] = "x86_64"
+            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "x86_64-apple-darwin"
+            cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-apple-darwin"
+    elif platform.system() == "Linux":
+        if ARCH == "AArch64":
+            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "aarch64-linux-gnu"
+            cmake_args["LLVM_HOST_TRIPLE"] = "aarch64-linux-gnu"
+        elif ARCH == "X86":
+            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "x86_64-unknown-linux-gnu"
+            cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-unknown-linux-gnu"
+
+    return [f"-D{k}={v}" for k, v in cmake_args.items()]
+
+
 class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension) -> None:
-        # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
+        cfg = "Release"
 
-        # Using this requires trailing slash for auto-detection & inclusion of
-        # auxiliary "native" libs
-
-        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
-        cfg = "Debug" if debug else "Release"
-
-        # CMake lets you override the generator - we need to check this.
-        # Can be set with Conda-Build, for example.
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
 
-        # Set Python_EXECUTABLE instead if you use PYBIND11_FINDPYTHON
-        # EXAMPLE_VERSION_INFO shows you how to pass a value into the C++ code
-        # from Python.
         cmake_args = [
             "-DBUILD_SHARED_LIBS=OFF",
             "-DLLVM_BUILD_BENCHMARKS=OFF",
@@ -68,17 +83,20 @@ class CMakeBuild(build_ext):
             "-DMLIR_ENABLE_BINDINGS_PYTHON=ON",
             "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
             "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
-            f"-DCMAKE_INSTALL_PREFIX={extdir}/llvm",
+            f"-DCMAKE_INSTALL_PREFIX={extdir}/llvm-mlir",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
-        build_args = []
-        # Adding CMake arguments set as environment variable
-        # (needed e.g. to build for ARM OSx on conda-forge)
+        cmake_args += get_cross_cmake_args()
+        if os.getenv("LLVM_NATIVE_TOOL_DIR"):
+            cmake_args += [
+                f"-DLLVM_NATIVE_TOOL_DIR={os.getenv('LLVM_NATIVE_TOOL_DIR')}"
+            ]
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
+        build_args = []
         if self.compiler.compiler_type != "msvc":
             # Using Ninja-build since it a) is available as a wheel and b)
             # multithreads automatically. MSVC would require all variables be
@@ -108,6 +126,12 @@ class CMakeBuild(build_ext):
             # contain a backward-compatibility arch spec already in the
             # generator name.
             if not single_config and not contains_arch:
+                PLAT_TO_CMAKE = {
+                    "win32": "Win32",
+                    "win-amd64": "x64",
+                    "win-arm32": "ARM",
+                    "win-arm64": "ARM64",
+                }
                 cmake_args += ["-A", PLAT_TO_CMAKE[self.plat_name]]
 
             # Multi-config generators have a different way to specify configs
@@ -124,18 +148,17 @@ class CMakeBuild(build_ext):
             if archs:
                 cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
 
-        # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
-        # across all generators.
-        if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
-            # self.parallel is a Python 3 only way to set parallel jobs by hand
-            # using -j in the build_ext call, not supported by pip or PyPA-build.
-            if hasattr(self, "parallel") and self.parallel:
-                # CMake 3.12+ only.
-                build_args += [f"-j{self.parallel}"]
+        if "PARALLEL_LEVEL" not in os.environ:
+            build_args += [f"-j{str(2 * os.cpu_count())}"]
+        else:
+            build_args += [f"-j{os.environ.get('PARALLEL_LEVEL')}"]
 
         build_temp = Path(self.build_temp) / ext.name
         if not build_temp.exists():
             build_temp.mkdir(parents=True)
+
+        print("ENV", pprint(os.environ))
+        print("CMAKE_ARGS", cmake_args)
 
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
@@ -146,17 +169,38 @@ class CMakeBuild(build_ext):
             check=True,
         )
 
+        if platform.machine() in {"x86_64", "AMD64"}:
+            if platform.system() == "Linux":
+                wheelhouse_dir = Path("/output").resolve()
+            else:
+                wheelhouse_dir = Path(__file__).parent / "wheelhouse"
 
-# The information here can also be placed in setup.cfg - better separation of
-# logic and declaration, and simpler if you include description/version in a file.
+            os.makedirs(wheelhouse_dir / "native_tools", exist_ok=True)
+            host_tools = [
+                "llvm-config",
+                "llvm-min-tblgen",
+                "llvm-tblgen",
+                "mlir-linalg-ods-yaml-gen",
+                "mlir-pdll",
+                "mlir-tblgen",
+            ]
+            if platform.system() == "Windows":
+                host_tools = [f"{h}.exe" for h in host_tools]
+            for h in host_tools:
+                shutil.copyfile(
+                    build_temp.absolute() / "bin" / h,
+                    wheelhouse_dir / "native_tools" / h,
+                )
+
+
 setup(
-    name="mlir",
-    version=str(int(os.environ.get("LLVM_PROJECT_COMMIT", "0xDEADBEEF"), 16)),
+    name="llvm-mlir",
+    version="17.0.0+" + os.environ.get("LLVM_PROJECT_COMMIT", "0xDEADBEEF"),
     author="",
     author_email="",
     description="",
     long_description="",
-    ext_modules=[CMakeExtension("llvm", sourcedir="llvm-project/llvm")],
+    ext_modules=[CMakeExtension("llvm-mlir", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     python_requires=">=3.11",

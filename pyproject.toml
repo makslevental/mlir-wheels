@@ -10,16 +10,17 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-build-verbosity = "3"
+build-verbosity = 3
 build = "cp311-*"
 #before-build = "rm -rf {project}/build"
 skip = ["*-manylinux_i686", "*-musllinux*"]
 
 [tool.cibuildwheel.linux]
 #archs = ["x86_64", "aarch64"]
-#before-all = ["yum install -y ccache"]
-#before-test = "ccache --show-stats"
-environment-pass = ["LLVM_PROJECT_COMMIT"]
+before-all = ["{project}/docker_prepare.sh"]
+before-test = "ccache --show-stats"
+environment-pass = ["LLVM_PROJECT_COMMIT", "CIBW_ARCHS", "HOST_CCACHE_DIR", "LLVM_NATIVE_TOOL_DIR"]
+manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
 
 [tool.cibuildwheel.macos]
 #archs = ["x86_64", "arm64"]

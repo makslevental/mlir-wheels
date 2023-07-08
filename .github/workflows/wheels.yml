@@ -11,7 +11,7 @@ on:
       debug_os:
         description: 'which runner os to run the tmate action in (if the tmate action is run)'
         type: string
-        default: 'windows-2019'
+        default: 'windows-2022'
         required: false
       debug_detached:
         description: 'whether to launch tmate in detached mode (if the tmate action is run)'
@@ -55,6 +55,7 @@ jobs:
     name: Wheels on ${{ matrix.os }} ${{ matrix.arch }}
 
     needs: get_llvm_project_commit
+    continue-on-error: true
 
     runs-on: ${{ matrix.os }}
     strategy:
@@ -64,23 +65,30 @@ jobs:
           - os: ubuntu-22.04
             arch: x86_64
             qemu: false
-          - os: ubuntu-22.04
-            arch: aarch64
-            qemu: true
-          - os: windows-2019
+            native_tools_artifact: ''
+#          - os: ubuntu-22.04
+#            arch: aarch64
+#            qemu: true
+#            native_tools_artifact: ubuntu-22.04-aarch64-native-tools
+          - os: windows-2022
             arch: AMD64
             qemu: false
-          - os: windows-2019
+            native_tools_artifact: ''
+          - os: windows-2022
             arch: ARM64
             qemu: false
+            native_tools_artifact: windows-2022-AMD64-native-tools
           - os: macos-11
             arch: x86_64
             qemu: false
+            native_tools_artifact: ''
           - os: macos-11
             arch: arm64
             qemu: false
+            native_tools_artifact: macos-11-arm64-native-tools
     outputs:
       LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+      NATIVE_TOOLS_ARTIFACT: ${{ matrix.native_tools_artifact }}
 
     steps:
     - uses: actions/checkout@v3
@@ -91,6 +99,8 @@ jobs:
         curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
         unzip -q llvm.zip
         mv llvm-project-${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} llvm-project
+        echo "LLVM_PROJECT_MAIN_SRC_DIR=$PWD/llvm-project" | tee -a $GITHUB_ENV
+        echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$PWD/build_host" | tee -a $GITHUB_ENV
 
     # Enable tmate debugging of manually-triggered workflows if the input option was provided
     - name: Setup tmate session
@@ -112,16 +122,45 @@ jobs:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
         max-size: "5G"
 
-#    - name: Install ccache on host
+    - name: Configure ccache dir on host
+      id: configure_ccache_dir_on_host
+      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      run: |
+        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+        mkdir -p $HOST_CCACHE_DIR
+        echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_ENV
+        echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
+
+#    - name: Build host llvm-tblgen/mlir-tblgen
+#      id: build_host_tools
+#      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.arch == 'aarch64' }}
 #      run: |
-#        echo "/usr/lib/ccache:/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
-#        HOST_CCACHE_DIR="$(ccache -k cache_dir)"
-#        mkdir -p $HOST_CCACHE_DIR
+#        sudo apt-get install -y ninja-build
+#        cmake \
+#          -G Ninja \
+#          -DBUILD_SHARED_LIBS=OFF \
+#          -DCMAKE_BUILD_TYPE=Release \
+#          -DCMAKE_CXX_COMPILER=g++ \
+#          -DCMAKE_CXX_FLAGS="-O2 -static-libgcc -static-libstdc++" \
+#          -DCMAKE_C_COMPILER=gcc \
+#          -DLLVM_ENABLE_PROJECTS=mlir \
+#          -DLLVM_ENABLE_TERMINFO=OFF \
+#          -DLLVM_ENABLE_ZLIB=OFF \
+#          -DLLVM_ENABLE_ZSTD=OFF \
+#          -DLLVM_TARGETS_TO_BUILD=X86 \
+#          -S${LLVM_PROJECT_MAIN_SRC_DIR}/llvm \
+#          -B${LLVM_PROJECT_HOST_MAIN_BINARY_DIR}
+#
+#        cmake --build ${LLVM_PROJECT_HOST_MAIN_BINARY_DIR} \
+#          --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll -j 20
+#        echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR" | tee -a $GITHUB_OUTPUT
 
     - uses: pypa/cibuildwheel@v2.13.0
       env:
         LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
         CIBW_ARCHS: ${{ matrix.arch }}
+        HOST_CCACHE_DIR: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
+#        LLVM_NATIVE_TOOL_DIR: "/host${{ steps.build_host_tools.outputs.LLVM_PROJECT_HOST_MAIN_BINARY_DIR }}"
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -129,15 +168,27 @@ jobs:
         path: wheelhouse/*.whl
         name: build_artifact
 
-#    - name: Download Cache from Docker
-#      shell: bash
-#      run: |
-#        ccache -s
-#        HOST_CCACHE_DIR="$(ccache -k cache_dir)"
-#        rm -rf $HOST_CCACHE_DIR
-#        mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
-#        ls -la $HOST_CCACHE_DIR
-#        ccache -s
+    - name: Tar host tools
+      shell: bash
+      if: ${{ matrix.arch == 'x86_64' || matrix.arch == 'AMD64' }}
+      run: |
+        XZ_OPT='-T0 -9' tar -cJf "${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz" wheelhouse/native_tools
+
+    - name: Upload host tools
+      if: ${{ matrix.arch == 'x86_64' || matrix.arch == 'AMD64' }}
+      uses: actions/upload-artifact@v3
+      with:
+        path: ${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz
+        name: ${{ matrix.os }}-${{ matrix.arch }}-native_tools
+
+    - name: Download cache from container
+      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      run: |
+        ccache -s
+        rm -rf $HOST_CCACHE_DIR
+        mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
+        ls -la $HOST_CCACHE_DIR
+        ccache -s
 
   upload_wheels:
 
@@ -159,6 +210,14 @@ jobs:
           name: build_artifact
           path: dist
 
+      - uses: actions/download-artifact@v3
+        if: ${{ needs.build.outputs.NATIVE_TOOLS_ARTIFACT != '' }}
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: ${{ needs.build.outputs.NATIVE_TOOLS_ARTIFACT }}
+          path: dist
+
       - name: Set up a release page
         id: setup_release
         run: |
@@ -170,7 +229,7 @@ jobs:
       - name: Release current commit
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "dist/*.whl"
+          artifacts: "dist/*.whl,dist/*.tar.xz"
           bodyFile: body.md
           token: "${{ secrets.GITHUB_TOKEN }}"
           tag: "${{ steps.setup_release.outputs.tag_name }}"
