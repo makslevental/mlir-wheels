@@ -16,10 +16,17 @@ build = "cp311-*"
 skip = ["*-manylinux_i686", "*-musllinux*"]
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
+#archs = ["x86_64", "aarch64"]
+#before-all = ["yum install -y ccache"]
+#before-test = "ccache --show-stats"
+environment-pass = ["LLVM_PROJECT_COMMIT"]
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
+#archs = ["x86_64", "arm64"]
+#before-all = "brew install ccache"
+#before-test = "ccache --show-stats"
 
 [tool.cibuildwheel.windows]
-archs = ["AMD64", "ARM64"]
+#archs = ["AMD64", "ARM64"]
+#before-all = "choco install ccache"
+#before-test = "ccache --show-stats"

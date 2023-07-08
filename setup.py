@@ -151,7 +151,7 @@ class CMakeBuild(build_ext):
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="mlir",
-    version="0.0.1",
+    version=str(int(os.environ.get("LLVM_PROJECT_COMMIT", "0xDEADBEEF"), 16)),
     author="",
     author_email="",
     description="",

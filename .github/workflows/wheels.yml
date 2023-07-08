@@ -2,6 +2,28 @@ name: Wheels
 
 on:
   workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        type: boolean
+        required: false
+        default: false
+      debug_os:
+        description: 'which runner os to run the tmate action in (if the tmate action is run)'
+        type: string
+        default: 'windows-2019'
+        required: false
+      debug_detached:
+        description: 'whether to launch tmate in detached mode (if the tmate action is run)'
+        type: boolean
+        required: false
+        default: true
+      llvm_commit:
+        description: 'llvm commit to build'
+        type: string
+        required: false
+        default: ''
+
   pull_request:
   release:
     types:
@@ -30,7 +52,7 @@ jobs:
 
   build_wheels:
 
-    name: Wheels on ${{ matrix.os }}
+    name: Wheels on ${{ matrix.os }} ${{ matrix.arch }}
 
     needs: get_llvm_project_commit
 
@@ -38,7 +60,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-22.04
+            arch: x86_64
+            qemu: false
+          - os: ubuntu-22.04
+            arch: aarch64
+            qemu: true
+          - os: windows-2019
+            arch: AMD64
+            qemu: false
+          - os: windows-2019
+            arch: ARM64
+            qemu: false
+          - os: macos-11
+            arch: x86_64
+            qemu: false
+          - os: macos-11
+            arch: arm64
+            qemu: false
     outputs:
       LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
 
@@ -48,20 +88,56 @@ jobs:
     - name: Get LLVM
       shell: bash
       run: |
-        curl https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
-        unzip llvm.zip -d llvm-project
+        curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
+        unzip -q llvm.zip
+        mv llvm-project-${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} llvm-project
+
+    # Enable tmate debugging of manually-triggered workflows if the input option was provided
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && inputs.debug_os == matrix.os }}
+      with:
+        limit-access-to-actor: true
+        detached: ${{ inputs.debug_detached }}
+
+    - name: Set up QEMU
+      if: matrix.qemu
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: all
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
+        max-size: "5G"
+
+#    - name: Install ccache on host
+#      run: |
+#        echo "/usr/lib/ccache:/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
+#        HOST_CCACHE_DIR="$(ccache -k cache_dir)"
+#        mkdir -p $HOST_CCACHE_DIR
 
     - uses: pypa/cibuildwheel@v2.13.0
-
-    - name: Verify clean directory
-      run: git diff --exit-code
-      shell: bash
+      env:
+        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        CIBW_ARCHS: ${{ matrix.arch }}
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
         path: wheelhouse/*.whl
         name: build_artifact
+
+#    - name: Download Cache from Docker
+#      shell: bash
+#      run: |
+#        ccache -s
+#        HOST_CCACHE_DIR="$(ccache -k cache_dir)"
+#        rm -rf $HOST_CCACHE_DIR
+#        mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
+#        ls -la $HOST_CCACHE_DIR
+#        ccache -s
 
   upload_wheels:
 
