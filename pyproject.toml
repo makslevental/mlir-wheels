@@ -17,9 +17,10 @@ skip = ["*-manylinux_i686", "*-musllinux*"]
 
 [tool.cibuildwheel.linux]
 #archs = ["x86_64", "aarch64"]
-before-all = ["{project}/docker_prepare.sh"]
+before-all = ["{project}/docker_prepare_ccache.sh"]
+before-build = ["{project}/install_cuda.sh"]
 before-test = "ccache --show-stats"
-environment-pass = ["LLVM_PROJECT_COMMIT", "CIBW_ARCHS", "HOST_CCACHE_DIR", "LLVM_NATIVE_TOOL_DIR"]
+environment-pass = ["LLVM_PROJECT_COMMIT", "CIBW_ARCHS", "HOST_CCACHE_DIR", "LLVM_NATIVE_TOOL_DIR", "BUILD_CUDA"]
 manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
 
 [tool.cibuildwheel.macos]
