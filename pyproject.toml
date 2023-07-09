@@ -18,12 +18,31 @@ skip = ["*-manylinux_i686", "*-musllinux*"]
 [tool.cibuildwheel.linux]
 #archs = ["x86_64", "aarch64"]
 before-all = ["{project}/docker_prepare_ccache.sh"]
-before-build = ["{project}/install_cuda.sh"]
+before-build = [
+    "{project}/install_cuda.sh",
+    "{project}/install_vulkan.sh",
+    "{project}/patch_openmp.sh",
+]
 before-test = "ccache --show-stats"
-environment-pass = ["LLVM_PROJECT_COMMIT", "CIBW_ARCHS", "HOST_CCACHE_DIR", "LLVM_NATIVE_TOOL_DIR", "BUILD_CUDA"]
+environment-pass = [
+    "BUILD_CUDA",
+    "BUILD_OPENMP",
+    "BUILD_VULKAN",
+    "CIBW_ARCHS",
+    "HOST_CCACHE_DIR",
+    "LLVM_NATIVE_TOOL_DIR",
+    "LLVM_PROJECT_COMMIT",
+    "LLVM_PROJECT_MAIN_SRC_DIR",
+    "MATRIX_OS",
+]
 manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libomp.so"
 
 [tool.cibuildwheel.macos]
+before-build = [
+    "{project}/install_vulkan.sh",
+    "{project}/patch_openmp.sh",
+]
 #archs = ["x86_64", "arm64"]
 #before-all = "brew install ccache"
 #before-test = "ccache --show-stats"

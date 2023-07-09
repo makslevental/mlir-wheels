@@ -51,8 +51,7 @@ jobs:
           echo "LLVM_PROJECT_COMMIT=${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
 
   build_wheels:
-
-    name: Wheels on ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda }}
+    name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda && 'cuda' || '' }} ${{ matrix.build_vulkan && 'vulkan' || '' }} ${{ matrix.build_openmp && 'openmp' || '' }}
 
     needs: get_llvm_project_commit
     continue-on-error: true
@@ -62,35 +61,47 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             arch: x86_64
-            native_tools_artifact: ubuntu-22.04-x86_64-native-tools
             build_cuda: true
-          - os: ubuntu-22.04
+            build_vulkan: true
+            build_openmp: true
+          - os: ubuntu-20.04
             arch: x86_64
-            native_tools_artifact: ubuntu-22.04-x86_64-native-tools
-            build_cuda: false
-#          - os: ubuntu-22.04
+            native_tools_artifact: ubuntu-20.04-x86_64-native-tools
+#          - os: ubuntu-20.04
 #            arch: aarch64
-#            native_tools_artifact: ''
           - os: windows-2022
             arch: AMD64
             native_tools_artifact: windows-2022-AMD64-native-tools
 #          - os: windows-2022
 #            arch: ARM64
-#            native_tools_artifact: ''
           - os: macos-11
             arch: x86_64
             native_tools_artifact: macos-11-x86_64-native-tools
           - os: macos-11
             arch: arm64
-            native_tools_artifact: ''
+          - os: macos-11
+            arch: arm64
+            build_vulkan: true
+            build_openmp: true
     outputs:
       LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
       NATIVE_TOOLS_ARTIFACT: ${{ matrix.native_tools_artifact }}
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: Free disk space
+      if: contains(matrix.os, 'ubuntu')
+      uses: jlumbroso/free-disk-space@76866dbe54312617f00798d1762df7f43def6e5c # v1.2.0
+      with:
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        swap-storage: false # This frees space on the wrong partition.
+        tool-cache: false # This includes Python, which we need.
 
     - name: Get LLVM
       shell: bash
@@ -110,14 +121,16 @@ jobs:
         detached: ${{ inputs.debug_detached }}
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
+      uses: hendrikmuhs/ccache-action@v1.2.9
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
         max-size: "5G"
+        append-timestamp: false
+#        variant: sccache
 
     - name: Configure ccache dir on host
       id: configure_ccache_dir_on_host
-      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      if: ${{ matrix.os == 'ubuntu-20.04' }}
       run: |
         HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         mkdir -p $HOST_CCACHE_DIR
@@ -132,7 +145,7 @@ jobs:
       id: build_host_tools
       if: ${{ matrix.native_tools_artifact != '' }}
       run: |
-        if [ x"${{ matrix.os }}" == x"ubuntu-22.04" ]; then
+        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
           export "STATIC_FLAGS=-static-libgcc -static-libstdc++"
         fi
         cmake \
@@ -153,7 +166,7 @@ jobs:
 
     - name: Tar host tools
       shell: bash
-      if: ${{ matrix.arch == 'x86_64' || matrix.arch == 'AMD64' }}
+      if: ${{ matrix.native_tools_artifact != '' }}
       run: |
         XZ_OPT='-T0 -9' tar -cJf \
           $PWD/"${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz" \
@@ -164,11 +177,11 @@ jobs:
           $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-pdll*
 
     - name: Upload host tools
-      if: ${{ matrix.arch == 'x86_64' || matrix.arch == 'AMD64' }}
+      if: ${{ matrix.native_tools_artifact != '' }}
       uses: actions/upload-artifact@v3
       with:
         path: ${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz
-        name: ${{ matrix.os }}-${{ matrix.arch }}-native_tools
+        name: native_tools
 
     - uses: pypa/cibuildwheel@v2.13.0
       env:
@@ -176,6 +189,12 @@ jobs:
         CIBW_ARCHS: ${{ matrix.arch }}
         HOST_CCACHE_DIR: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
         BUILD_CUDA: ${{ matrix.build_cuda }}
+        BUILD_VULKAN: ${{ matrix.build_vulkan }}
+        BUILD_OPENMP: ${{ matrix.build_openmp }}
+        MATRIX_OS: ${{ matrix.os }}
+        LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
+        PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '10' }}
+#        CMAKE_GENERATOR: Ninja
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -184,9 +203,11 @@ jobs:
         name: build_artifact
 
     - name: Download cache from container
-      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      shell: bash
+      if: (matrix.os == 'ubuntu-20.04') && (success() || failure())
       run: |
         ccache -s
+        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         rm -rf $HOST_CCACHE_DIR
         mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
         ls -la $HOST_CCACHE_DIR
@@ -215,16 +236,16 @@ jobs:
       - uses: actions/download-artifact@v3
         if: ${{ needs.build_wheels.outputs.NATIVE_TOOLS_ARTIFACT }} != '' }}
         with:
-          name: ${{ needs.build_wheels.outputs.NATIVE_TOOLS_ARTIFACT }}
+          name: native_tools
           path: dist
 
       - name: Set up a release page
         id: setup_release
         run: |
           LLVM_PROJECT_COMMIT="${{ needs.build_wheels.outputs.LLVM_PROJECT_COMMIT }}"
-          echo "Created at $(date) build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
-          echo "tag_name=llvm-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
-          echo "release_title=llvm-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
+          echo "MLIR Distribution created at $(date), build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
+          echo "tag_name=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
+          echo "release_title=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
 
       - name: Release current commit
         uses: ncipollo/release-action@v1
