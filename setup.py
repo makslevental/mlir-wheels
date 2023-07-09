@@ -48,6 +48,9 @@ def get_cross_cmake_args():
             cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "x86_64-unknown-linux-gnu"
             cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-unknown-linux-gnu"
 
+    if BUILD_CUDA:
+        cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
+
     return [f"-D{k}={v}" for k, v in cmake_args.items()]
 
 
@@ -93,6 +96,13 @@ class CMakeBuild(build_ext):
             cmake_args += [
                 f"-DLLVM_NATIVE_TOOL_DIR={os.getenv('LLVM_NATIVE_TOOL_DIR')}"
             ]
+
+        if BUILD_CUDA:
+            cmake_args += [
+                "-DMLIR_ENABLE_CUDA_RUNNER=ON",
+                "-DMLIR_ENABLE_CUDA_CONVERSIONS=ON",
+            ]
+
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
@@ -169,33 +179,15 @@ class CMakeBuild(build_ext):
             check=True,
         )
 
-        if platform.machine() in {"x86_64", "AMD64"}:
-            if platform.system() == "Linux":
-                wheelhouse_dir = Path("/output").resolve()
-            else:
-                wheelhouse_dir = Path(__file__).parent / "wheelhouse"
 
-            os.makedirs(wheelhouse_dir / "native_tools", exist_ok=True)
-            host_tools = [
-                "llvm-config",
-                "llvm-min-tblgen",
-                "llvm-tblgen",
-                "mlir-linalg-ods-yaml-gen",
-                "mlir-pdll",
-                "mlir-tblgen",
-            ]
-            if platform.system() == "Windows":
-                host_tools = [f"{h}.exe" for h in host_tools]
-            for h in host_tools:
-                shutil.copyfile(
-                    build_temp.absolute() / "bin" / h,
-                    wheelhouse_dir / "native_tools" / h,
-                )
-
+version = "17.0.0+" + os.environ.get("LLVM_PROJECT_COMMIT", "0xDEADBEEF")
+BUILD_CUDA = os.environ.get("BUILD_CUDA", 0) in {"1", "true", "True", "ON", "YES"}
+if BUILD_CUDA:
+    version += "+cuda"
 
 setup(
     name="llvm-mlir",
-    version="17.0.0+" + os.environ.get("LLVM_PROJECT_COMMIT", "0xDEADBEEF"),
+    version=version,
     author="",
     author_email="",
     description="",

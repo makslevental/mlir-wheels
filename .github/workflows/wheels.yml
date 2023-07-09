@@ -52,7 +52,7 @@ jobs:
 
   build_wheels:
 
-    name: Wheels on ${{ matrix.os }} ${{ matrix.arch }}
+    name: Wheels on ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda }}
 
     needs: get_llvm_project_commit
     continue-on-error: true
@@ -64,31 +64,29 @@ jobs:
         include:
           - os: ubuntu-22.04
             arch: x86_64
-            qemu: false
-            native_tools_artifact: ''
+            native_tools_artifact: ubuntu-22.04-x86_64-native-tools
+            build_cuda: true
+          - os: ubuntu-22.04
+            arch: x86_64
+            native_tools_artifact: ubuntu-22.04-x86_64-native-tools
+            build_cuda: false
 #          - os: ubuntu-22.04
 #            arch: aarch64
-#            qemu: true
-#            native_tools_artifact: ubuntu-22.04-aarch64-native-tools
+#            native_tools_artifact: ''
           - os: windows-2022
             arch: AMD64
-            qemu: false
-            native_tools_artifact: ''
+            native_tools_artifact: windows-2022-AMD64-native-tools
           - os: windows-2022
             arch: ARM64
-            qemu: false
-            native_tools_artifact: windows-2022-AMD64-native-tools
-          - os: macos-11
-            arch: x86_64
-            qemu: false
             native_tools_artifact: ''
           - os: macos-11
+            arch: x86_64
+            native_tools_artifact: macos-11-x86_64-native-tools
+          - os: macos-11
             arch: arm64
-            qemu: false
-            native_tools_artifact: macos-11-arm64-native-tools
+            native_tools_artifact: ''
     outputs:
       LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-      NATIVE_TOOLS_ARTIFACT: ${{ matrix.native_tools_artifact }}
 
     steps:
     - uses: actions/checkout@v3
@@ -110,12 +108,6 @@ jobs:
         limit-access-to-actor: true
         detached: ${{ inputs.debug_detached }}
 
-    - name: Set up QEMU
-      if: matrix.qemu
-      uses: docker/setup-qemu-action@v1
-      with:
-        platforms: all
-
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
@@ -131,48 +123,44 @@ jobs:
         echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_ENV
         echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
 
-#    - name: Build host llvm-tblgen/mlir-tblgen
-#      id: build_host_tools
-#      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.arch == 'aarch64' }}
-#      run: |
-#        sudo apt-get install -y ninja-build
-#        cmake \
-#          -G Ninja \
-#          -DBUILD_SHARED_LIBS=OFF \
-#          -DCMAKE_BUILD_TYPE=Release \
-#          -DCMAKE_CXX_COMPILER=g++ \
-#          -DCMAKE_CXX_FLAGS="-O2 -static-libgcc -static-libstdc++" \
-#          -DCMAKE_C_COMPILER=gcc \
-#          -DLLVM_ENABLE_PROJECTS=mlir \
-#          -DLLVM_ENABLE_TERMINFO=OFF \
-#          -DLLVM_ENABLE_ZLIB=OFF \
-#          -DLLVM_ENABLE_ZSTD=OFF \
-#          -DLLVM_TARGETS_TO_BUILD=X86 \
-#          -S${LLVM_PROJECT_MAIN_SRC_DIR}/llvm \
-#          -B${LLVM_PROJECT_HOST_MAIN_BINARY_DIR}
-#
-#        cmake --build ${LLVM_PROJECT_HOST_MAIN_BINARY_DIR} \
-#          --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll -j 20
-#        echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR" | tee -a $GITHUB_OUTPUT
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17
 
-    - uses: pypa/cibuildwheel@v2.13.0
-      env:
-        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-        CIBW_ARCHS: ${{ matrix.arch }}
-        HOST_CCACHE_DIR: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
-#        LLVM_NATIVE_TOOL_DIR: "/host${{ steps.build_host_tools.outputs.LLVM_PROJECT_HOST_MAIN_BINARY_DIR }}"
+    - name: Build host llvm-tblgen/mlir-tblgen
+      shell: bash
+      id: build_host_tools
+      if: ${{ matrix.native_tools_artifact != '' }}
+      run: |
+        if [ x"${{ matrix.os }}" == x"ubuntu-22.04" ]; then
+          export "STATIC_FLAGS=-static-libgcc -static-libstdc++"
+        fi
+        cmake \
+          -G Ninja \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_CXX_FLAGS="-O2 ${STATIC_FLAGS}" \
+          -DLLVM_ENABLE_PROJECTS=mlir \
+          -DLLVM_ENABLE_TERMINFO=OFF \
+          -DLLVM_ENABLE_ZLIB=OFF \
+          -DLLVM_ENABLE_ZSTD=OFF \
+          -DLLVM_TARGETS_TO_BUILD=X86 \
+          -S${LLVM_PROJECT_MAIN_SRC_DIR}/llvm \
+          -B${LLVM_PROJECT_HOST_MAIN_BINARY_DIR}
 
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        path: wheelhouse/*.whl
-        name: build_artifact
+        cmake --build ${LLVM_PROJECT_HOST_MAIN_BINARY_DIR} \
+          --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll -j 20
 
     - name: Tar host tools
       shell: bash
       if: ${{ matrix.arch == 'x86_64' || matrix.arch == 'AMD64' }}
       run: |
-        XZ_OPT='-T0 -9' tar -cJf "${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz" wheelhouse/native_tools
+        XZ_OPT='-T0 -9' tar -cJf \
+          $PWD/"${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz" \
+          -C $LLVM_PROJECT_HOST_MAIN_BINARY_DIR \
+          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/llvm-tblgen* \
+          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-tblgen* \
+          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-linalg-ods-yaml-gen* \
+          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-pdll*
 
     - name: Upload host tools
       if: ${{ matrix.arch == 'x86_64' || matrix.arch == 'AMD64' }}
@@ -180,6 +168,19 @@ jobs:
       with:
         path: ${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz
         name: ${{ matrix.os }}-${{ matrix.arch }}-native_tools
+
+    - uses: pypa/cibuildwheel@v2.13.0
+      env:
+        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        CIBW_ARCHS: ${{ matrix.arch }}
+        HOST_CCACHE_DIR: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
+        BUILD_CUDA: ${{ matrix.build_cuda }}
+
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+        path: wheelhouse/*.whl
+        name: build_artifact
 
     - name: Download cache from container
       if: ${{ matrix.os == 'ubuntu-22.04' }}
@@ -211,17 +212,17 @@ jobs:
           path: dist
 
       - uses: actions/download-artifact@v3
-        if: ${{ needs.build.outputs.NATIVE_TOOLS_ARTIFACT != '' }}
+        if: ${{ matrix.native_tools_artifact != '' }}
         with:
           # unpacks default artifact into dist/
           # if `name: artifact` is omitted, the action will create extra parent dir
-          name: ${{ needs.build.outputs.NATIVE_TOOLS_ARTIFACT }}
+          name: ${{ matrix.native_tools_artifact }}
           path: dist
 
       - name: Set up a release page
         id: setup_release
         run: |
-          LLVM_PROJECT_COMMIT="${{ needs.build.outputs.LLVM_PROJECT_COMMIT }}"
+          LLVM_PROJECT_COMMIT="${{ needs.build_wheels.outputs.LLVM_PROJECT_COMMIT }}"
           echo "Created at $(date) build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
           echo "tag_name=llvm-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
           echo "release_title=llvm-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
