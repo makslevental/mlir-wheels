@@ -2,8 +2,8 @@
 set -xe
 
 if [[ x"${BUILD_CUDA}" == x"true" ]]; then
-  curl -o cuda.run http://developer.download.nvidia.com/compute/cuda/11.7.1/local_installers/cuda_11.7.1_515.65.01_linux.run
-  cuda.run --toolkit --silent --override
+  wget -q https://developer.download.nvidia.com/compute/cuda/11.7.1/local_installers/cuda_11.7.1_515.65.01_linux.run
+  sh cuda_11.7.1_515.65.01_linux.run --toolkit --silent --override
   if [[ $? -ne 0 ]]; then
     echo "CUDA Installation Error."
     exit 1

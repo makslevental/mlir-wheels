@@ -1,7 +1,6 @@
 import os
 import platform
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -72,7 +71,6 @@ class CMakeBuild(build_ext):
             "-DLLVM_BUILD_UTILS=ON",
             "-DLLVM_CCACHE_BUILD=ON",
             "-DLLVM_ENABLE_ASSERTIONS=ON",
-            "-DLLVM_ENABLE_PROJECTS=mlir",
             "-DLLVM_ENABLE_RTTI=ON",
             "-DLLVM_ENABLE_ZSTD=OFF",
             "-DLLVM_INCLUDE_BENCHMARKS=OFF",
@@ -86,7 +84,7 @@ class CMakeBuild(build_ext):
             "-DMLIR_ENABLE_BINDINGS_PYTHON=ON",
             "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
             "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
-            f"-DCMAKE_INSTALL_PREFIX={extdir}/llvm-mlir",
+            f"-DCMAKE_INSTALL_PREFIX={extdir}/mlir",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
@@ -97,11 +95,35 @@ class CMakeBuild(build_ext):
                 f"-DLLVM_NATIVE_TOOL_DIR={os.getenv('LLVM_NATIVE_TOOL_DIR')}"
             ]
 
+        LLVM_ENABLE_PROJECTS = "mlir"
+
         if BUILD_CUDA:
             cmake_args += [
                 "-DMLIR_ENABLE_CUDA_RUNNER=ON",
                 "-DMLIR_ENABLE_CUDA_CONVERSIONS=ON",
+                "-DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.7/bin/nvcc",
             ]
+
+        if BUILD_VULKAN:
+            cmake_args += ["-DMLIR_ENABLE_VULKAN_RUNNER=ON"]
+            if platform.system() == "Darwin":
+                vulkan_library = "/usr/local/lib/libvulkan.dylib"
+            elif platform.system() == "Linux":
+                vulkan_library = "/usr/local/lib64/libvulkan.so"
+            else:
+                raise ValueError(f"unknown location for vulkan lib")
+            cmake_args += [f"-DVulkan_LIBRARY={vulkan_library}"]
+
+        if BUILD_OPENMP:
+            cmake_args += [
+                "-DENABLE_CHECK_TARGETS=OFF",
+                "-DLIBOMP_OMPD_GDB_SUPPORT=OFF",
+                "-DLIBOMP_USE_QUAD_PRECISION=False",
+                "-DOPENMP_ENABLE_LIBOMPTARGET=OFF",
+            ]
+            LLVM_ENABLE_PROJECTS += ";openmp"
+
+        cmake_args += [f"-DLLVM_ENABLE_PROJECTS={LLVM_ENABLE_PROJECTS}"]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
@@ -180,19 +202,30 @@ class CMakeBuild(build_ext):
         )
 
 
-version = "17.0.0+" + os.environ.get("LLVM_PROJECT_COMMIT", "0xDEADBEEF")
-BUILD_CUDA = os.environ.get("BUILD_CUDA", 0) in {"1", "true", "True", "ON", "YES"}
+def check_env(build):
+    return os.environ.get(build, 0) in {"1", "true", "True", "ON", "YES"}
+
+
+version = f'17.0.0+{os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")}'
+
+BUILD_CUDA = check_env("BUILD_CUDA")
 if BUILD_CUDA:
-    version += "+cuda"
+    version += ".cuda"
+BUILD_VULKAN = check_env("BUILD_VULKAN")
+if BUILD_VULKAN:
+    version += ".vulkan"
+BUILD_OPENMP = check_env("BUILD_OPENMP")
+if BUILD_OPENMP:
+    version += ".openmp"
 
 setup(
-    name="llvm-mlir",
+    name="mlir",
     version=version,
     author="",
     author_email="",
     description="",
     long_description="",
-    ext_modules=[CMakeExtension("llvm-mlir", sourcedir="llvm-project/llvm")],
+    ext_modules=[CMakeExtension("mlir", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     python_requires=">=3.11",
