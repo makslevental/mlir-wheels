@@ -172,13 +172,10 @@ jobs:
       shell: bash
       if: ${{ matrix.native_tools_artifact != '' }}
       run: |
-        XZ_OPT='-T0 -9' tar -cJf \
-          $PWD/"${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz" \
-          -C $LLVM_PROJECT_HOST_MAIN_BINARY_DIR \
-          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/llvm-tblgen* \
-          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-tblgen* \
-          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-linalg-ods-yaml-gen* \
-          $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-pdll*
+        TARF="$PWD/${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz"
+        pushd $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin
+        XZ_OPT='-T0 -9' tar -cJ -f $TARF llvm-tblgen* mlir-tblgen* mlir-linalg-ods-yaml-gen* mlir-pdll*
+        popd
 
     - name: Upload host tools
       if: ${{ matrix.native_tools_artifact != '' }}
@@ -251,20 +248,20 @@ jobs:
           echo "tag_name=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
           echo "release_title=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
 
-      - name: Release current commit
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "dist/*.whl,dist/*.tar.xz"
-          bodyFile: body.md
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          tag: "${{ steps.setup_release.outputs.tag_name }}"
-          name: "${{ steps.setup_release.outputs.release_title }}"
-          removeArtifacts: false
-          allowUpdates: true
-          replacesArtifacts: true
+#      - name: Release current commit
+#        uses: ncipollo/release-action@v1
+#        with:
+#          artifacts: "dist/*.whl,dist/*.tar.xz"
+#          bodyFile: body.md
+#          token: "${{ secrets.GITHUB_TOKEN }}"
+#          tag: "${{ steps.setup_release.outputs.tag_name }}"
+#          name: "${{ steps.setup_release.outputs.release_title }}"
+#          removeArtifacts: false
+#          allowUpdates: true
+#          replacesArtifacts: true
 
       - name: Release current commit
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@v1.12.0
         with:
           artifacts: "dist/*.whl,dist/*.tar.xz"
           bodyFile: body.md
@@ -274,3 +271,4 @@ jobs:
           removeArtifacts: false
           allowUpdates: true
           replacesArtifacts: true
+          makeLatest: true
