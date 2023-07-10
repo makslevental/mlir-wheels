@@ -262,3 +262,15 @@ jobs:
           removeArtifacts: false
           allowUpdates: true
           replacesArtifacts: true
+
+      - name: Release current commit
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*.whl,dist/*.tar.xz"
+          bodyFile: body.md
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          tag: "latest"
+          name: "latest"
+          removeArtifacts: false
+          allowUpdates: true
+          replacesArtifacts: true

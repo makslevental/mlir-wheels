@@ -105,6 +105,7 @@ class CMakeBuild(build_ext):
                 "-DMLIR_ENABLE_CUDA_RUNNER=ON",
                 "-DMLIR_ENABLE_CUDA_CONVERSIONS=ON",
                 "-DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.7/bin/nvcc",
+                "-DCUDAToolkit_ROOT=/usr/local/cuda-11.7"
             ]
 
         if BUILD_VULKAN:
@@ -234,7 +235,7 @@ BUILD_OPENMP = check_env("BUILD_OPENMP")
 if BUILD_OPENMP:
     local_version += ["openmp"]
 if local_version:
-    version += ".".join(local_version)
+    version += "." + ".".join(local_version)
 
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(
