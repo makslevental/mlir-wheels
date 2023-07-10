@@ -220,9 +220,9 @@ release_version = re.findall(
 )
 assert release_version, "couldn't find release version in pstl release notes"
 release_version = release_version[0]
+commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
-timestamp = int(time.time())
-version = f"{release_version}.{timestamp}"
+version = f"{release_version}+{commit_hash}"
 local_version = []
 BUILD_CUDA = check_env("BUILD_CUDA")
 if BUILD_CUDA:
@@ -234,9 +234,8 @@ BUILD_OPENMP = check_env("BUILD_OPENMP")
 if BUILD_OPENMP:
     local_version += ["openmp"]
 if local_version:
-    version += "+" + ".".join(local_version)
+    version += ".".join(local_version)
 
-commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(
     name="mlir",

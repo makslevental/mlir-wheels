@@ -14,9 +14,9 @@ echo ${machine}
 
 export HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
 export PARALLEL_LEVEL=20
-export BUILD_CUDA=true
-export BUILD_OPENMP=true
-export BUILD_VULKAN=true
+export BUILD_CUDA=false
+export BUILD_OPENMP=false
+export BUILD_VULKAN=false
 
 if [ "$machine" == "Linux" ]; then
   export LLVM_PROJECT_MAIN_SRC_DIR=/project/llvm-project

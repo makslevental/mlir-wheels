@@ -262,18 +262,3 @@ jobs:
           removeArtifacts: false
           allowUpdates: true
           replacesArtifacts: true
-
-      - name: Move Pypi legal wheels
-        run: |
-          mkdir -p pypi-wheels-dir
-          # https://unix.stackexchange.com/questions/154818/how-to-integrate-mv-command-after-find-command#comment800179_154819
-          find ./dist -maxdepth 1 -name '*.whl' ! -name '*cuda*' ! -name '*vulkan*' ! -name '*openmp*' -exec mv -t pypi-wheels-dir {} + 
-
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          user: __token__
-          password: ${{ secrets.test_pypi_password }}
-          skip-existing: true
-          verbose: true
-          packages-dir: pypi-wheels-dir/
