@@ -1,8 +1,11 @@
+import datetime
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 from pprint import pprint
 
@@ -200,33 +203,52 @@ class CMakeBuild(build_ext):
             cwd=build_temp,
             check=True,
         )
+        shutil.move(
+            extdir / "mlir" / "python_packages" / "mlir_core" / "mlir",
+            extdir / "mlir" / "mlir",
+        )
 
 
 def check_env(build):
     return os.environ.get(build, 0) in {"1", "true", "True", "ON", "YES"}
 
 
-version = f'17.0.0+{os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")}'
+# LLVM Compiler Infrastructure, release 17.0.0
+pstl_release_notes = open("llvm-project/pstl/docs/ReleaseNotes.rst").read()
+release_version = re.findall(
+    r"LLVM Compiler Infrastructure, release (\d+\.\d+\.\d+)", pstl_release_notes
+)
+assert release_version, "couldn't find release version in pstl release notes"
+release_version = release_version[0]
 
+timestamp = int(time.time())
+version = f"{release_version}.{timestamp}"
+local_version = []
 BUILD_CUDA = check_env("BUILD_CUDA")
 if BUILD_CUDA:
-    version += ".cuda"
+    local_version += ["cuda"]
 BUILD_VULKAN = check_env("BUILD_VULKAN")
 if BUILD_VULKAN:
-    version += ".vulkan"
+    local_version += ["vulkan"]
 BUILD_OPENMP = check_env("BUILD_OPENMP")
 if BUILD_OPENMP:
-    version += ".openmp"
+    local_version += ["openmp"]
+if local_version:
+    version += "+" + ".".join(local_version)
 
+commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
+llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(
     name="mlir",
     version=version,
     author="",
     author_email="",
-    description="",
-    long_description="",
+    description=f"MLIR distribution as wheel. Created at {datetime.datetime.now()} build of {llvm_url}",
+    long_description=f"MLIR distribution as wheel. Created at {datetime.datetime.now()} build of [llvm/llvm-project/{commit_hash}]({llvm_url})",
+    long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("mlir", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     python_requires=">=3.11",
+    download_url=llvm_url,
 )
