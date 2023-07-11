@@ -1,4 +1,5 @@
 import datetime
+import glob
 import os
 import platform
 import re
@@ -53,7 +54,7 @@ def get_cross_cmake_args():
     if BUILD_CUDA:
         cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
 
-    return [f"-D{k}={v}" for k, v in cmake_args.items()]
+    return cmake_args
 
 
 class CMakeBuild(build_ext):
@@ -92,7 +93,8 @@ class CMakeBuild(build_ext):
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
-        cmake_args += get_cross_cmake_args()
+        cmake_args_dict = get_cross_cmake_args()
+        cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
         if os.getenv("LLVM_NATIVE_TOOL_DIR"):
             cmake_args += [
                 f"-DLLVM_NATIVE_TOOL_DIR={os.getenv('LLVM_NATIVE_TOOL_DIR')}"
@@ -105,7 +107,7 @@ class CMakeBuild(build_ext):
                 "-DMLIR_ENABLE_CUDA_RUNNER=ON",
                 "-DMLIR_ENABLE_CUDA_CONVERSIONS=ON",
                 "-DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.7/bin/nvcc",
-                "-DCUDAToolkit_ROOT=/usr/local/cuda-11.7"
+                "-DCUDAToolkit_ROOT=/usr/local/cuda-11.7",
             ]
 
         if BUILD_VULKAN:
@@ -129,16 +131,20 @@ class CMakeBuild(build_ext):
 
         cmake_args += [f"-DLLVM_ENABLE_PROJECTS={LLVM_ENABLE_PROJECTS}"]
 
+        if (
+            platform.system() == "Linux"
+            and "AArch64" in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]
+        ):
+            native_tools_dir = os.getenv("LLVM_NATIVE_TOOL_DIR")
+            assert native_tools_dir is not None, "native_tools_dir missing"
+            assert os.path.exists(native_tools_dir), "native_tools_dir doesn't exist"
+            cmake_args += [f"-DLLVM_NATIVE_TOOL_DIR={native_tools_dir}"]
+
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
         build_args = []
         if self.compiler.compiler_type != "msvc":
-            # Using Ninja-build since it a) is available as a wheel and b)
-            # multithreads automatically. MSVC would require all variables be
-            # exported for Ninja to pick it up, which is a little tricky to do.
-            # Users can override the generator with CMAKE_GENERATOR in CMake
-            # 3.15+.
             if not cmake_generator or cmake_generator == "Ninja":
                 try:
                     import ninja
@@ -152,15 +158,8 @@ class CMakeBuild(build_ext):
                     pass
 
         else:
-            # Single config generators are handled "normally"
             single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
-
-            # CMake allows an arch-in-generator style for backward compatibility
             contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
-
-            # Specify the arch if using MSVC generator, but only if it doesn't
-            # contain a backward-compatibility arch spec already in the
-            # generator name.
             if not single_config and not contains_arch:
                 PLAT_TO_CMAKE = {
                     "win32": "Win32",
@@ -169,8 +168,6 @@ class CMakeBuild(build_ext):
                     "win-arm64": "ARM64",
                 }
                 cmake_args += ["-A", PLAT_TO_CMAKE[self.plat_name]]
-
-            # Multi-config generators have a different way to specify configs
             if not single_config:
                 cmake_args += [
                     f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}"
@@ -208,6 +205,13 @@ class CMakeBuild(build_ext):
             extdir / "mlir" / "python_packages" / "mlir_core" / "mlir",
             extdir / "mlir" / "mlir",
         )
+        if (
+            platform.system() == "Linux"
+            and "AArch64" in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]
+        ):
+            for shlib in glob.glob("**/*.so", recursive=True):
+                if "x86_64" in shlib:
+                    shutil.move(shlib, shlib.replace("x86_64", "aarch64"))
 
 
 def check_env(build):

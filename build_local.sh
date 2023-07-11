@@ -13,9 +13,9 @@ esac
 echo ${machine}
 
 export HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-export PARALLEL_LEVEL=20
+export PARALLEL_LEVEL=5
 export BUILD_CUDA=false
-export BUILD_OPENMP=false
+export BUILD_OPENMP=true
 export BUILD_VULKAN=false
 
 if [ "$machine" == "Linux" ]; then

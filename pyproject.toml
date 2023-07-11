@@ -34,6 +34,7 @@ environment-pass = [
     "LLVM_PROJECT_COMMIT",
     "LLVM_PROJECT_MAIN_SRC_DIR",
     "MATRIX_OS",
+    "PARALLEL_LEVEL",
 ]
 manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libomp.so"

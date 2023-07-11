@@ -74,7 +74,10 @@ jobs:
             arch: x86_64
             native_tools_artifact: ubuntu-20.04-x86_64-native-tools
 #          - os: ubuntu-20.04
+#            build_vulkan: false
+#            build_openmp: false
 #            arch: aarch64
+#            native_tools_artifact: ubuntu-20.04-x86_64-native-tools
           - os: windows-2022
             arch: AMD64
             native_tools_artifact: windows-2022-AMD64-native-tools
@@ -166,7 +169,7 @@ jobs:
           -B${LLVM_PROJECT_HOST_MAIN_BINARY_DIR}
 
         cmake --build ${LLVM_PROJECT_HOST_MAIN_BINARY_DIR} \
-          --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll -j 20
+          --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll llvm-config -j 20
 
     - name: Tar host tools
       shell: bash
@@ -174,7 +177,7 @@ jobs:
       run: |
         TARF="$PWD/${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz"
         pushd $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin
-        XZ_OPT='-T0 -9' tar -cJ -f $TARF llvm-tblgen* mlir-tblgen* mlir-linalg-ods-yaml-gen* mlir-pdll*
+        XZ_OPT='-T0 -9' tar -cJ -f $TARF llvm-tblgen* mlir-tblgen* mlir-linalg-ods-yaml-gen* mlir-pdll* llvm-config*
         popd
 
     - name: Upload host tools
@@ -186,16 +189,16 @@ jobs:
 
     - uses: pypa/cibuildwheel@v2.13.0
       env:
-        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        BUILD_CUDA: ${{ matrix.build_cuda }}
+        BUILD_OPENMP: ${{ matrix.build_openmp }}
+        BUILD_VULKAN: ${{ matrix.build_vulkan }}
         CIBW_ARCHS: ${{ matrix.arch }}
         HOST_CCACHE_DIR: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
-        BUILD_CUDA: ${{ matrix.build_cuda }}
-        BUILD_VULKAN: ${{ matrix.build_vulkan }}
-        BUILD_OPENMP: ${{ matrix.build_openmp }}
-        MATRIX_OS: ${{ matrix.os }}
+        LLVM_NATIVE_TOOL_DIR: ${{ matrix.arch == 'aarch64' && '/project/build_host/bin' || '' }}
+        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
         LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
+        MATRIX_OS: ${{ matrix.os }}
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '10' }}
-#        CMAKE_GENERATOR: Ninja
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -247,18 +250,6 @@ jobs:
           echo "MLIR Distribution created at $(date), build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
           echo "tag_name=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
           echo "release_title=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
-
-#      - name: Release current commit
-#        uses: ncipollo/release-action@v1
-#        with:
-#          artifacts: "dist/*.whl,dist/*.tar.xz"
-#          bodyFile: body.md
-#          token: "${{ secrets.GITHUB_TOKEN }}"
-#          tag: "${{ steps.setup_release.outputs.tag_name }}"
-#          name: "${{ steps.setup_release.outputs.release_title }}"
-#          removeArtifacts: false
-#          allowUpdates: true
-#          replacesArtifacts: true
 
       - name: Release current commit
         uses: ncipollo/release-action@v1.12.0
