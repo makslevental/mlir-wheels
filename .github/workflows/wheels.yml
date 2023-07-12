@@ -11,7 +11,7 @@ on:
       debug_os:
         description: 'which runner os to run the tmate action in (if the tmate action is run)'
         type: string
-        default: 'windows-2022'
+        default: 'windows-2019'
         required: false
       debug_detached:
         description: 'whether to launch tmate in detached mode (if the tmate action is run)'
@@ -78,10 +78,10 @@ jobs:
 #            build_openmp: false
 #            arch: aarch64
 #            native_tools_artifact: ubuntu-20.04-x86_64-native-tools
-          - os: windows-2022
+          - os: windows-2019
             arch: AMD64
-            native_tools_artifact: windows-2022-AMD64-native-tools
-#          - os: windows-2022
+            native_tools_artifact: windows-2019-AMD64-native-tools
+#          - os: windows-2019
 #            arch: ARM64
           - os: macos-11
             arch: x86_64
@@ -198,7 +198,7 @@ jobs:
         LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
         LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
         MATRIX_OS: ${{ matrix.os }}
-        PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '2' }}
+        PARALLEL_LEVEL: ${{ matrix.os == 'windows-2019' && '2' || '2' }}
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
