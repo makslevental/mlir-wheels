@@ -34,7 +34,7 @@ fi
 
 # hack until https://github.com/pypa/cibuildwheel/issues/1030 is fixed
 # Place ccache folder in /outputs
-HOST_CCACHE_DIR="/host${HOST_CCACHE_DIR:-/home/runner/work/cibuildwheel-llvm-mlir/cibuildwheel-llvm-mlir/.ccache}"
+HOST_CCACHE_DIR="/host${HOST_CCACHE_DIR:-/home/runner/work/mlir-wheels/mlir-wheels/.ccache}"
 if [ -d $HOST_CCACHE_DIR ]; then
   mkdir -p /output
   cp -R $HOST_CCACHE_DIR /output/.ccache
