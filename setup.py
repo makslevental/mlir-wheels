@@ -6,7 +6,6 @@ import re
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 from pprint import pprint
 
@@ -55,6 +54,14 @@ def get_cross_cmake_args():
         cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
 
     return cmake_args
+
+
+def get_exe_suffix():
+    if platform.system() == "Windows":
+        suffix = ".exe"
+    else:
+        suffix = ""
+    return suffix
 
 
 class CMakeBuild(build_ext):
