@@ -72,20 +72,16 @@ jobs:
             build_openmp: true
           - os: ubuntu-20.04
             arch: x86_64
-            native_tools_artifact: ubuntu-20.04-x86_64-native-tools
 #          - os: ubuntu-20.04
 #            build_vulkan: false
 #            build_openmp: false
 #            arch: aarch64
-#            native_tools_artifact: ubuntu-20.04-x86_64-native-tools
           - os: windows-2022
             arch: AMD64
-            native_tools_artifact: windows-2022-AMD64-native-tools
 #          - os: windows-2022
 #            arch: ARM64
           - os: macos-11
             arch: x86_64
-            native_tools_artifact: macos-11-x86_64-native-tools
           - os: macos-11
             arch: arm64
           - os: macos-11
@@ -94,7 +90,6 @@ jobs:
             build_openmp: true
     outputs:
       LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-      NATIVE_TOOLS_ARTIFACT: ${{ matrix.native_tools_artifact }}
 
     steps:
     - uses: actions/checkout@v3
@@ -150,7 +145,7 @@ jobs:
     - name: Build host llvm-tblgen/mlir-tblgen
       shell: bash
       id: build_host_tools
-      if: ${{ matrix.native_tools_artifact != '' }}
+      if: ${{ matrix.arch == 'aarch64' || matrix.arch == 'arm64' || matrix.arch == 'ARM64' }}
       run: |
         if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
           export "STATIC_FLAGS=-static-libgcc -static-libstdc++"
@@ -171,22 +166,6 @@ jobs:
         cmake --build ${LLVM_PROJECT_HOST_MAIN_BINARY_DIR} \
           --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll llvm-config -j 20
 
-    - name: Tar host tools
-      shell: bash
-      if: ${{ matrix.native_tools_artifact != '' }}
-      run: |
-        TARF="$PWD/${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz"
-        pushd $LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin
-        XZ_OPT='-T0 -9' tar -cJ -f $TARF llvm-tblgen* mlir-tblgen* mlir-linalg-ods-yaml-gen* mlir-pdll* llvm-config*
-        popd
-
-    - name: Upload host tools
-      if: ${{ matrix.native_tools_artifact != '' }}
-      uses: actions/upload-artifact@v3
-      with:
-        path: ${{ matrix.os }}-${{ matrix.arch }}-native_tools.tar.xz
-        name: native_tools
-
     - uses: pypa/cibuildwheel@v2.13.0
       env:
         BUILD_CUDA: ${{ matrix.build_cuda }}
@@ -199,6 +178,27 @@ jobs:
         LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
         MATRIX_OS: ${{ matrix.os }}
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '2' }}
+
+    - name: Build native_tools wheel
+      shell: bash
+      id: build_native_tools_wheel
+      run: |
+        for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
+          unzip -j wheelhouse/mlir-17.0.0*whl "mlir/bin/$TOOL" -d native_tools/
+        done
+        
+        if [ x"$MATRIX_OS" == x"ubuntu-20.04" ]; then
+          PLAT="manylinux_2_17"
+        elif [ x"$MATRIX_OS" == x"macos-11" ]; then
+          PLAT="macosx_11_0"
+        elif [ x"$MATRIX_OS" == x"windows-2022" ]; then
+          PLAT="win"
+        fi
+        
+        PLAT=${PLAT}_$(echo $ARCH | tr '[:upper:]' '[:lower:]')
+        pushd native_tools
+        python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
+        popd
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -235,12 +235,6 @@ jobs:
           # unpacks default artifact into dist/
           # if `name: artifact` is omitted, the action will create extra parent dir
           name: build_artifact
-          path: dist
-
-      - uses: actions/download-artifact@v3
-        if: ${{ needs.build_wheels.outputs.NATIVE_TOOLS_ARTIFACT }} != '' }}
-        with:
-          name: native_tools
           path: dist
 
       - name: Set up a release page

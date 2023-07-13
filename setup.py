@@ -6,7 +6,6 @@ import re
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 from pprint import pprint
 
@@ -57,8 +56,28 @@ def get_cross_cmake_args():
     return cmake_args
 
 
+def get_exe_suffix():
+    if platform.system() == "Windows":
+        suffix = ".exe"
+    else:
+        suffix = ""
+    return suffix
+
+
 class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension) -> None:
+        if (
+            "bdist_wheel" in self.distribution.command_options
+            and "dist_dir" in self.distribution.command_options["bdist_wheel"]
+        ):
+            command_line, dist_dir = self.distribution.command_options["bdist_wheel"][
+                "dist_dir"
+            ]
+            assert command_line == "command line", f"wrong {command_line=}"
+            dist_dir = Path(dist_dir)
+        else:
+            dist_dir = Path(__file__).parent / "wheelhouse"
+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
         cfg = "Release"
