@@ -66,6 +66,18 @@ def get_exe_suffix():
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension) -> None:
+        if (
+            "bdist_wheel" in self.distribution.command_options
+            and "dist_dir" in self.distribution.command_options["bdist_wheel"]
+        ):
+            command_line, dist_dir = self.distribution.command_options["bdist_wheel"][
+                "dist_dir"
+            ]
+            assert command_line == "command line", f"wrong {command_line=}"
+            dist_dir = Path(dist_dir)
+        else:
+            dist_dir = Path(__file__).parent / "wheelhouse"
+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
         cfg = "Release"
