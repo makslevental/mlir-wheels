@@ -132,7 +132,7 @@ jobs:
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
         max-size: "5G"
-        append-timestamp: false
+#        append-timestamp: false
 #        variant: sccache
 
     - name: Configure ccache dir on host
@@ -184,11 +184,18 @@ jobs:
         MATRIX_OS: ${{ matrix.os }}
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '2' }}
 
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
     - name: Build native_tools wheel
       shell: bash
       id: build_native_tools_wheel
       run: |
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
+          if [ x"$MATRIX_OS" == x"windows-2022" ]; then
+            TOOL="$TOOL.exe"
+          fi
           unzip -j wheelhouse/mlir-17.0.0*whl "mlir/bin/$TOOL" -d native_tools/
         done
         
@@ -200,6 +207,7 @@ jobs:
           PLAT="win"
         fi
         
+        pip install wheel
         PLAT=${PLAT}_$(echo $ARCH | tr '[:upper:]' '[:lower:]')
         pushd native_tools
         python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
