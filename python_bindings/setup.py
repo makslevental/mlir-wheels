@@ -2,20 +2,10 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import os
-import platform
 import re
 from pathlib import Path
 
-from setuptools import setup
-
-
-def get_exe_suffix():
-    if platform.system() == "Windows":
-        suffix = ".exe"
-    else:
-        suffix = ""
-    return suffix
-
+from setuptools import find_namespace_packages, setup, Distribution
 
 # LLVM Compiler Infrastructure, release 17.0.0
 pstl_release_notes = open(
@@ -34,20 +24,24 @@ commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
 version = f"{release_version}+{commit_hash}"
 
-data_files = []
-for bin in [
-    "llvm-tblgen",
-    "mlir-tblgen",
-    "mlir-linalg-ods-yaml-gen",
-    "mlir-pdll",
-    "llvm-config",
-    "FileCheck",
-]:
-    data_files.append(bin + get_exe_suffix())
+packages = find_namespace_packages(
+    include=[
+        "mlir",
+        "mlir.*",
+    ],
+)
+
+
+class BinaryDistribution(Distribution):
+    """Distribution which always forces a binary package with platform name"""
+
+    def has_ext_modules(foo):
+        return True
+
 
 setup(
     version=version,
-    name="mlir-native-tools",
+    name="mlir-python-bindings",
     include_package_data=True,
-    data_files=[("bin", data_files)],
+    distclass=BinaryDistribution,
 )

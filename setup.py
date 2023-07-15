@@ -68,6 +68,7 @@ class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension) -> None:
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
+        install_dir = extdir / "mlir"
         cfg = "Release"
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
@@ -80,7 +81,6 @@ class CMakeBuild(build_ext):
             "-DLLVM_BUILD_TESTS=OFF",
             "-DLLVM_BUILD_TOOLS=ON",
             "-DLLVM_BUILD_UTILS=ON",
-            "-DLLVM_CCACHE_BUILD=ON",
             "-DLLVM_ENABLE_ASSERTIONS=ON",
             "-DLLVM_ENABLE_RTTI=ON",
             "-DLLVM_ENABLE_ZSTD=OFF",
@@ -95,11 +95,24 @@ class CMakeBuild(build_ext):
             "-DMLIR_ENABLE_BINDINGS_PYTHON=ON",
             "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
             "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
-            f"-DCMAKE_INSTALL_PREFIX={extdir}/mlir",
+            # get rid of that annoying af git on the end of .17git
+            "-DLLVM_VERSION_SUFFIX=",
+            f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
+        if platform.system() == "Windows":
+            cmake_args += [
+                "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
+                "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache",
+            ]
+        else:
+            cmake_args += [
+                "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
+                "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
+            ]
+
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
         if os.getenv("LLVM_NATIVE_TOOL_DIR"):
@@ -107,7 +120,7 @@ class CMakeBuild(build_ext):
                 f"-DLLVM_NATIVE_TOOL_DIR={os.getenv('LLVM_NATIVE_TOOL_DIR')}"
             ]
 
-        LLVM_ENABLE_PROJECTS = "mlir"
+        LLVM_ENABLE_PROJECTS = "llvm;mlir"
 
         if BUILD_CUDA:
             cmake_args += [
@@ -197,8 +210,8 @@ class CMakeBuild(build_ext):
         if not build_temp.exists():
             build_temp.mkdir(parents=True)
 
-        print("ENV", pprint(os.environ))
-        print("CMAKE_ARGS", cmake_args)
+        print("ENV", pprint(os.environ), file=sys.stderr)
+        print("CMAKE_ARGS", cmake_args, file=sys.stderr)
 
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
@@ -208,17 +221,40 @@ class CMakeBuild(build_ext):
             cwd=build_temp,
             check=True,
         )
-        shutil.move(
-            extdir / "mlir" / "python_packages" / "mlir_core" / "mlir",
-            extdir / "mlir" / "mlir",
+
+        if platform.system() == "Darwin":
+            shlib_ext = "dylib"
+        elif platform.system() == "Linux":
+            shlib_ext = "so"
+        elif platform.system() == "Windows":
+            shlib_ext = "lib"
+        else:
+            raise NotImplementedError(f"unknown platform {platform.system()}")
+
+        shlibs = [
+            "mlir_async_runtime",
+            "mlir_c_runner_utils",
+            "mlir_float16_utils",
+            "mlir_runner_utils",
+        ]
+        if BUILD_CUDA:
+            shlibs += ["mlir_cuda_runtime"]
+        if BUILD_OPENMP:
+            shlibs += ["omp"]
+        if BUILD_VULKAN:
+            shlibs += ["vulkan-runtime-wrappers"]
+        if platform.system() in {"Linux", "Darwin"}:
+            shlibs = [f"lib{sh}" for sh in shlibs]
+
+        mlir_libs_dir = (
+            install_dir / "python_packages" / "mlir_core" / "mlir" / "_mlir_libs"
         )
-        if (
-            platform.system() == "Linux"
-            and "AArch64" in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]
-        ):
-            for shlib in glob.glob("**/*.so", recursive=True):
-                if "x86_64" in shlib:
-                    shutil.move(shlib, shlib.replace("x86_64", "aarch64"))
+        for shlib in shlibs:
+            shlib_name = f"{shlib}.{shlib_ext}"
+            shlib_llvm_install_fp = (install_dir / "lib" / shlib_name).absolute()
+            assert shlib_llvm_install_fp.exists()
+            dst_path = mlir_libs_dir / shlib_name
+            shutil.copyfile(shlib_llvm_install_fp, dst_path, follow_symlinks=True)
 
 
 def check_env(build):

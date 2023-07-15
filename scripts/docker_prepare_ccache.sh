@@ -38,12 +38,13 @@ HOST_CCACHE_DIR="/host${HOST_CCACHE_DIR:-/home/runner/work/mlir-wheels/mlir-whee
 if [ -d $HOST_CCACHE_DIR ]; then
   mkdir -p /output
   cp -R $HOST_CCACHE_DIR /output/.ccache
-  ls -la /output/
+  ls -la /output/.ccache
 fi
 
 ccache -o cache_dir="/output/.ccache"
 ccache -M 5 G # set cache size to 5 G
-
 # Show ccache stats
 echo "Cache stats:"
-ccache -s
+ccache --show-stats
+ccache --print-stats
+ccache --show-config
