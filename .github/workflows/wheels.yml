@@ -115,7 +115,9 @@ jobs:
       run: |
         curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
         unzip -q llvm.zip
-        mv llvm-project-${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} llvm-project
+        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
+        echo "LLVM_PROJECT_COMMIT=$LLVM_PROJECT_COMMIT" | tee -a $GITHUB_ENV
         echo "LLVM_PROJECT_MAIN_SRC_DIR=$PWD/llvm-project" | tee -a $GITHUB_ENV
         echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$PWD/build_host" | tee -a $GITHUB_ENV
 
@@ -132,8 +134,8 @@ jobs:
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
         max-size: "5G"
-#        append-timestamp: false
-#        variant: sccache
+        variant: ${{ matrix.os == 'windows-2022' && 'sccache' || 'ccache' }}
+        append-timestamp: false
 
     - name: Configure ccache dir on host
       id: configure_ccache_dir_on_host
@@ -184,41 +186,6 @@ jobs:
         MATRIX_OS: ${{ matrix.os }}
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '2' }}
 
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
-    - name: Build native_tools wheel
-      shell: bash
-      id: build_native_tools_wheel
-      run: |
-        for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
-          if [ x"$MATRIX_OS" == x"windows-2022" ]; then
-            TOOL="$TOOL.exe"
-          fi
-          unzip -j wheelhouse/mlir-17.0.0*whl "mlir/bin/$TOOL" -d native_tools/
-        done
-        
-        if [ x"$MATRIX_OS" == x"ubuntu-20.04" ]; then
-          PLAT="manylinux_2_17"
-        elif [ x"$MATRIX_OS" == x"macos-11" ]; then
-          PLAT="macosx_11_0"
-        elif [ x"$MATRIX_OS" == x"windows-2022" ]; then
-          PLAT="win"
-        fi
-        
-        pip install wheel
-        PLAT=${PLAT}_$(echo $ARCH | tr '[:upper:]' '[:lower:]')
-        pushd native_tools
-        python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
-        popd
-
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        path: wheelhouse/*.whl
-        name: build_artifact
-
     - name: Download cache from container
       shell: bash
       if: (matrix.os == 'ubuntu-20.04') && (success() || failure())
@@ -229,6 +196,57 @@ jobs:
         mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
         ls -la $HOST_CCACHE_DIR
         ccache -s
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Build native_tools wheel
+      shell: bash
+      id: build_native_tools_wheel
+      run: |
+        for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
+          if [ x"${{ matrix.os }}" == x"windows-2022" ]; then
+            TOOL="$TOOL.exe"
+          fi
+          unzip -j wheelhouse/mlir-17.0.0*whl "mlir/bin/$TOOL" -d native_tools/
+        done
+        
+        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
+          PLAT="manylinux_2_17"
+        elif [ x"${{ matrix.os }}" == x"macos-11" ]; then
+          PLAT="macosx_11_0"
+        elif [ x"${{ matrix.os }}" == x"windows-2022" ]; then
+          PLAT="win"
+        fi
+        
+        pip install wheel
+        PLAT=${PLAT}_$(echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+        pushd native_tools
+        python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
+        popd
+
+    - name: Unzip bindings
+      shell: bash
+      id: unzip_bindings
+      run: |
+        unzip wheelhouse/mlir-17.0.0*whl "mlir/python_packages/mlir_core/*" -d /tmp
+        mv /tmp/mlir/python_packages/mlir_core/mlir python_bindings
+
+    - uses: pypa/cibuildwheel@v2.13.0
+      env:
+        CIBW_ARCHS: ${{ matrix.arch }}
+        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+      with:
+        package-dir: python_bindings
+        output-dir: wheelhouse
+
+    - name: Upload wheels
+      if: success() || failure()
+      uses: actions/upload-artifact@v3
+      with:
+        path: wheelhouse/*.whl
+        name: build_artifact
 
   upload_wheels:
 

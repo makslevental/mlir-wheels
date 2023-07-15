@@ -1,0 +1,31 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+build-verbosity = 3
+build = "cp311-*"
+before-build = "rm -rf {project}/scripts/build"
+skip = ["*-manylinux_i686", "*-musllinux*"]
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = [
+    'export LD_LIBRARY_PATH="$(realpath $(dirname $(find . -name libMLIRPythonCAPI.so | tail -n1)))"',
+    "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1"
+]
+environment-pass = [
+    "LLVM_PROJECT_COMMIT"
+]
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = [
+    'export DYLD_FALLBACK_LIBRARY_PATH="$(realpath $(dirname $(find . -name libMLIRPythonCAPI.dylib | tail -n1)))"',
+    "delocate-listdeps {wheel}",
+    "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} --ignore-missing-dependencies"
+]
+
+[tool.cibuildwheel.windows]
+before-build = "pip install delvewheel"
+repair-wheel-command = 'delvewheel repair --add-path "$(realpath $(dirname $(find . -name MLIRPythonCAPI.lib | tail -n1)))" -w {dest_dir} {wheel}'
