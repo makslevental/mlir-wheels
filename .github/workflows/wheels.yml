@@ -230,7 +230,7 @@ jobs:
       shell: bash
       id: unzip_bindings
       run: |
-        unzip wheelhouse/mlir-17.0.0*whl "mlir/python_packages/mlir_core/*" -d /tmp
+        unzip wheelhouse/mlir-17.0.0*whl "mlir/python_packages/mlir_core/**" -d /tmp
         mv /tmp/mlir/python_packages/mlir_core/mlir python_bindings
 
     - uses: pypa/cibuildwheel@v2.13.0
