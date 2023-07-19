@@ -4,6 +4,7 @@
 import os
 import platform
 import re
+from datetime import datetime
 from pathlib import Path
 
 from setuptools import setup
@@ -32,7 +33,12 @@ assert release_version, "couldn't find release version in pstl release notes"
 release_version = release_version[0]
 commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
-version = f"{release_version}+{commit_hash}"
+now = datetime.now()
+llvm_datetime = os.environ.get(
+    "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
+)
+
+version = f"{release_version}.{llvm_datetime}+{commit_hash}"
 
 data_files = []
 for bin in [

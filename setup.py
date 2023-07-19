@@ -1,5 +1,4 @@
-import datetime
-import glob
+from datetime import datetime
 import os
 import platform
 import re
@@ -270,7 +269,12 @@ assert release_version, "couldn't find release version in pstl release notes"
 release_version = release_version[0]
 commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
-version = f"{release_version}+{commit_hash}"
+now = datetime.now()
+llvm_datetime = os.environ.get(
+    "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
+)
+
+version = f"{release_version}.{llvm_datetime}+{commit_hash}"
 local_version = []
 BUILD_CUDA = check_env("BUILD_CUDA")
 if BUILD_CUDA:
@@ -290,8 +294,8 @@ setup(
     version=version,
     author="",
     author_email="",
-    description=f"MLIR distribution as wheel. Created at {datetime.datetime.now()} build of {llvm_url}",
-    long_description=f"MLIR distribution as wheel. Created at {datetime.datetime.now()} build of [llvm/llvm-project/{commit_hash}]({llvm_url})",
+    description=f"MLIR distribution as wheel. Created at {now} build of {llvm_url}",
+    long_description=f"MLIR distribution as wheel. Created at {now} build of [llvm/llvm-project/{commit_hash}]({llvm_url})",
     long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("mlir", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},

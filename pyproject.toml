@@ -37,6 +37,7 @@ environment-pass = [
     "HOST_CCACHE_DIR",
     "LLVM_NATIVE_TOOL_DIR",
     "LLVM_PROJECT_COMMIT",
+    "LLVM_DATETIME",
     "LLVM_PROJECT_MAIN_SRC_DIR",
     "MATRIX_OS",
     "PARALLEL_LEVEL",

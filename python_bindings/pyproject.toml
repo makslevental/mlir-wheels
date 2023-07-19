@@ -16,7 +16,8 @@ repair-wheel-command = [
     "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1"
 ]
 environment-pass = [
-    "LLVM_PROJECT_COMMIT"
+    "LLVM_PROJECT_COMMIT",
+    "LLVM_DATETIME"
 ]
 
 [tool.cibuildwheel.macos]

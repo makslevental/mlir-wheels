@@ -47,6 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       LLVM_PROJECT_COMMIT: ${{ steps.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+      LLVM_DATETIME: ${{ steps.get_llvm_project_commit.outputs.LLVM_DATETIME }}
     steps:
       - name: Get llvm-project commit
         id: get_llvm_project_commit
@@ -58,6 +59,8 @@ jobs:
             LLVM_PROJECT_COMMIT="${{ inputs.llvm_commit }}"
           fi
           echo "LLVM_PROJECT_COMMIT=${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
+          DATETIME=$(date +"%Y.%m.%d.%H")
+          echo "LLVM_DATETIME=${DATETIME}" | tee -a $GITHUB_OUTPUT
 
   build_wheels:
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda && 'cuda' || '' }} ${{ matrix.build_vulkan && 'vulkan' || '' }} ${{ matrix.build_openmp && 'openmp' || '' }}
@@ -120,6 +123,7 @@ jobs:
         echo "LLVM_PROJECT_COMMIT=$LLVM_PROJECT_COMMIT" | tee -a $GITHUB_ENV
         echo "LLVM_PROJECT_MAIN_SRC_DIR=$PWD/llvm-project" | tee -a $GITHUB_ENV
         echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$PWD/build_host" | tee -a $GITHUB_ENV
+        echo "LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}" | tee -a $GITHUB_ENV
 
     # Enable tmate debugging of manually-triggered workflows if the input option was provided
     - name: Setup tmate session
@@ -182,6 +186,7 @@ jobs:
         HOST_CCACHE_DIR: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
         LLVM_NATIVE_TOOL_DIR: ${{ matrix.arch == 'aarch64' && '/project/build_host/bin' || '' }}
         LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        LLVM_DATETIME: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
         LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
         MATRIX_OS: ${{ matrix.os }}
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '2' }}
@@ -237,6 +242,7 @@ jobs:
       env:
         CIBW_ARCHS: ${{ matrix.arch }}
         LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        LLVM_DATETIME: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
       with:
         package-dir: python_bindings
         output-dir: wheelhouse
