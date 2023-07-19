@@ -3,3 +3,4 @@ recursive-include mlir *.dll
 recursive-include mlir *.lib
 recursive-include mlir *.dylib
 recursive-include mlir *.pyi
+recursive-include mlir *.h
