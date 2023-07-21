@@ -35,8 +35,8 @@ on:
       - published
 
   schedule:
-    # At minute 0 past hour 1, 7, 13, and 19. (see https://crontab.guru)
-    - cron: '00 01,07,13,19 * * *'
+    # At minute 0 past hour 1. (see https://crontab.guru)
+    - cron: '00 01 * * *'
 
 jobs:
 
