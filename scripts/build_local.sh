@@ -18,7 +18,6 @@ ccache --show-stats
 ccache --print-stats
 ccache --show-config
 
-export BUILD_CUDA=false
 export BUILD_OPENMP=true
 export BUILD_VULKAN=false
 
@@ -28,17 +27,20 @@ if [ "$machine" == "linux" ]; then
   export CIBW_ARCHS=x86_64
   export ARCH=x86_64
   export PARALLEL_LEVEL=15
+  export BUILD_CUDA=true
 elif [ "$machine" == "macos" ]; then
   export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=macos-11
   export CIBW_ARCHS=arm64
   export ARCH=arm64
   export PARALLEL_LEVEL=32
+  export BUILD_CUDA=false
 else
   export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=windows-2022
   export CIBW_ARCHS=AMD64
   export ARCH=AMD64
+  export BUILD_CUDA=false
 fi
 
 #export PIP_NO_BUILD_ISOLATION=false

@@ -125,8 +125,8 @@ class CMakeBuild(build_ext):
             cmake_args += [
                 "-DMLIR_ENABLE_CUDA_RUNNER=ON",
                 "-DMLIR_ENABLE_CUDA_CONVERSIONS=ON",
-                "-DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.7/bin/nvcc",
-                "-DCUDAToolkit_ROOT=/usr/local/cuda-11.7",
+                "-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc",
+                "-DCUDAToolkit_ROOT=/usr/local/cuda",
             ]
 
         if BUILD_VULKAN:
