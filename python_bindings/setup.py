@@ -27,7 +27,24 @@ llvm_datetime = os.environ.get(
     "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
 )
 
+
+def check_env(build):
+    return os.environ.get(build, 0) in {"1", "true", "True", "ON", "YES"}
+
+
 version = f"{release_version}.{llvm_datetime}+{commit_hash}"
+local_version = []
+BUILD_CUDA = check_env("BUILD_CUDA")
+if BUILD_CUDA:
+    local_version += ["cuda"]
+BUILD_VULKAN = check_env("BUILD_VULKAN")
+if BUILD_VULKAN:
+    local_version += ["vulkan"]
+BUILD_OPENMP = check_env("BUILD_OPENMP")
+if BUILD_OPENMP:
+    local_version += ["openmp"]
+if local_version:
+    version += "." + ".".join(local_version)
 
 packages = find_namespace_packages(
     include=[

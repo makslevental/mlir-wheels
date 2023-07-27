@@ -5,3 +5,4 @@ recursive-include mlir *.dylib
 recursive-include mlir *.pyd
 recursive-include mlir *.pyi
 recursive-include mlir *.h
+recursive-include mlir *.td

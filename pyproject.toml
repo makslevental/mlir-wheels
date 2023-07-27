@@ -26,7 +26,7 @@ before-all = [
 before-build = [
     "{project}/scripts/install_cuda.sh",
     "{project}/scripts/install_vulkan.sh",
-    "{project}/scripts/patch_openmp.sh",
+    "{project}/scripts/apply_patches.sh",
 ]
 before-test = "ccache --show-stats"
 environment-pass = [
@@ -54,7 +54,7 @@ PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH"
 [tool.cibuildwheel.macos]
 before-build = [
     "{project}/scripts/install_vulkan.sh",
-    "{project}/scripts/patch_openmp.sh",
+    "{project}/scripts/apply_patches.sh",
 ]
 before-test = "ccache --show-stats"
 repair-wheel-command = ""
@@ -63,7 +63,11 @@ repair-wheel-command = ""
 PATH = "/opt/homebrew/opt/ccache/libexec:$PATH"
 
 [tool.cibuildwheel.windows]
-before-build = "pip install delvewheel"
+#before-build = "pip install delvewheel"
+before-build = [
+    "{project}\\scripts\\install_vulkan.sh",
+    "{project}\\scripts\\apply_patches.sh",
+]
 # repair-wheel-command = 'delvewheel repair --add-path "$(realpath $(dirname $(find . -name MLIR-C.lib | tail -n1)))" -L \python_packages\mlir_core\mlir\_mlir_libs -w {dest_dir} {wheel}'
 repair-wheel-command = ""
 
