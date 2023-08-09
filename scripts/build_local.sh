@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -xe
-HERE=$(dirname "$(realpath $0)")
+HERE=$(dirname "$(realpath "$0")")
 
 unameOut="$(uname -s)"
 case "${unameOut}" in
@@ -11,12 +11,7 @@ case "${unameOut}" in
     MSYS_NT*)   machine=windows;;
     *)          machine="UNKNOWN:${unameOut}"
 esac
-echo ${machine}
-
-export HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-ccache --show-stats
-ccache --print-stats
-ccache --show-config
+echo "${machine}"
 
 export BUILD_OPENMP=true
 export BUILD_VULKAN=false
@@ -27,7 +22,7 @@ if [ "$machine" == "linux" ]; then
   export CIBW_ARCHS=x86_64
   export ARCH=x86_64
   export PARALLEL_LEVEL=15
-  export BUILD_CUDA=false
+  export BUILD_CUDA=true
 elif [ "$machine" == "macos" ]; then
   export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=macos-11
@@ -44,23 +39,28 @@ else
 fi
 
 #export PIP_NO_BUILD_ISOLATION=false
-cibuildwheel $HERE/.. --platform $machine
+ccache --show-stats
+ccache --print-stats
+ccache --show-config
 
-if [ x"$MATRIX_OS" == x"ubuntu-20.04" ]; then
-  ccache -s
-  rm -rf $HOST_CCACHE_DIR
-  mv $HERE/../wheelhouse/.ccache $HOST_CCACHE_DIR
-  ls -la $HOST_CCACHE_DIR
-  ccache --show-stats
-  ccache --print-stats
-  ccache --show-config
+if [ x"$BUILD_CUDA" == x"true" ] && [ ! -f "$HERE/../cuda_12.2.0_535.54.03_linux.run" ]; then
+  wget -q https://developer.download.nvidia.com/compute/cuda/12.2.0/local_installers/cuda_12.2.0_535.54.03_linux.run -o "$HERE/../cuda_12.2.0_535.54.03_linux.run"
+fi
+
+export HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+cibuildwheel "$HERE"/.. --platform "$machine"
+
+rename 's/cp311-cp311/py3-none/' "$HERE/../wheelhouse/"mlir-*whl
+
+if [ -d "$HERE/../wheelhouse/.ccache" ]; then
+  cp -R "$HERE/../wheelhouse/.ccache/"* "$HOST_CCACHE_DIR/"
 fi
 
 for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
   if [ x"$MATRIX_OS" == x"windows-2022" ]; then
     TOOL="$TOOL.exe"
   fi
-  unzip -j $HERE/../wheelhouse/mlir-17.0.0*whl "mlir/bin/$TOOL" -d $HERE/../native_tools/
+  unzip -j "$HERE/../wheelhouse/"mlir-*whl "mlir/bin/$TOOL" -d "$HERE/../native_tools/"
 done
 
 if [ x"$MATRIX_OS" == x"ubuntu-20.04" ]; then
@@ -72,10 +72,17 @@ elif [ x"$MATRIX_OS" == x"windows-2022" ]; then
 fi
 
 PLAT=${PLAT}_$(echo $ARCH | tr '[:upper:]' '[:lower:]')
-pushd $HERE/../native_tools
-python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
+pushd "$HERE/../native_tools"
+python setup.py bdist_wheel --dist-dir ../wheelhouse --plat "$PLAT"
 popd
 
-unzip $HERE/../wheelhouse/mlir-17.0.0*whl "mlir/python_packages/mlir_core/mlir/*" -d /tmp
-cp -R /tmp/mlir/python_packages/mlir_core/mlir $HERE/../python_bindings
-cibuildwheel $HERE/../python_bindings --platform $machine --output-dir $HERE/../wheelhouse
+unzip $HERE/../wheelhouse/mlir-*whl -x "mlir/bin/*" -d ../python_bindings
+
+cp -R "$HERE/../scripts" "$HERE/../python_bindings"
+
+pushd "$HERE/../python_bindings"
+sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' mlir/lib/cmake/mlir/MLIRTargets.cmake
+sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' mlir/lib/cmake/mlir/MLIRTargets.cmake
+
+find mlir -exec touch {} \;
+cibuildwheel --platform "$machine" --output-dir ../wheelhouse

@@ -1,8 +1,8 @@
+import shutil
 from datetime import datetime
 import os
 import platform
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -220,53 +220,20 @@ class CMakeBuild(build_ext):
             cwd=build_temp,
             check=True,
         )
-
-        if platform.system() == "Darwin":
-            shlib_ext = "dylib"
-        elif platform.system() == "Linux":
-            shlib_ext = "so"
-        elif platform.system() == "Windows":
-            shlib_ext = "lib"
-        else:
-            raise NotImplementedError(f"unknown platform {platform.system()}")
-
-        shlibs = [
-            "mlir_async_runtime",
-            "mlir_c_runner_utils",
-            "mlir_float16_utils",
-            "mlir_runner_utils",
-        ]
-        if BUILD_CUDA:
-            shlibs += ["mlir_cuda_runtime"]
-        if BUILD_OPENMP:
-            shlibs += ["omp"]
-        if BUILD_VULKAN:
-            shlibs += ["vulkan-runtime-wrappers"]
-        if platform.system() in {"Linux", "Darwin"}:
-            shlibs = [f"lib{sh}" for sh in shlibs]
-
-        mlir_libs_dir = (
-            install_dir / "python_packages" / "mlir_core" / "mlir" / "_mlir_libs"
-        )
-        for shlib in shlibs:
-            shlib_name = f"{shlib}.{shlib_ext}"
-            shlib_llvm_install_fp = (install_dir / "lib" / shlib_name).absolute()
-            assert shlib_llvm_install_fp.exists()
-            dst_path = mlir_libs_dir / shlib_name
-            shutil.copyfile(shlib_llvm_install_fp, dst_path, follow_symlinks=True)
+        shutil.rmtree(install_dir / "python_packages", ignore_errors=True)
 
 
 def check_env(build):
     return os.environ.get(build, 0) in {"1", "true", "True", "ON", "YES"}
 
 
-# LLVM Compiler Infrastructure, release 17.0.0
-pstl_release_notes = open("llvm-project/pstl/docs/ReleaseNotes.rst").read()
-release_version = re.findall(
-    r"LLVM Compiler Infrastructure, release (\d+\.\d+\.\d+)", pstl_release_notes
-)
-assert release_version, "couldn't find release version in pstl release notes"
-release_version = release_version[0]
+cmake_txt = open("llvm-project/llvm/CMakeLists.txt").read()
+llvm_version = []
+for v in ["LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH"]:
+    vn = re.findall(rf"set\({v} (\d+)\)", cmake_txt)
+    assert vn, f"couldn't find {v} in cmake txt"
+    llvm_version.append(vn[0])
+
 commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
 now = datetime.now()
@@ -274,7 +241,8 @@ llvm_datetime = os.environ.get(
     "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
 )
 
-version = f"{release_version}.{llvm_datetime}+{commit_hash}"
+version = f"{llvm_version[0]}.{llvm_version[1]}.{llvm_version[2]}.{llvm_datetime}+{commit_hash}"
+
 local_version = []
 BUILD_CUDA = check_env("BUILD_CUDA")
 if BUILD_CUDA:
@@ -292,7 +260,7 @@ llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(
     name="mlir",
     version=version,
-    author="",
+    author="maksim.levental@gmail.com",
     author_email="",
     description=f"MLIR distribution as wheel. Created at {now} build of {llvm_url}",
     long_description=f"MLIR distribution as wheel. Created at {now} build of [llvm/llvm-project/{commit_hash}]({llvm_url})",
@@ -300,6 +268,5 @@ setup(
     ext_modules=[CMakeExtension("mlir", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    python_requires=">=3.11",
     download_url=llvm_url,
 )
