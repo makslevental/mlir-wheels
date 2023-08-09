@@ -6,6 +6,7 @@ requires = [
     "cmake>=3.12",
     "pybind11[global]>=2.10.4",
     "numpy",
+    "dataclasses"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -43,10 +44,7 @@ environment-pass = [
     "PARALLEL_LEVEL",
 ]
 manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
-repair-wheel-command = [
-    'export LD_LIBRARY_PATH="$(realpath $(dirname $(find . -name libMLIR-C.so | tail -n1)))"',
-    "auditwheel repair -w {dest_dir} {wheel} -L /python_packages/mlir_core/mlir/_mlir_libs --exclude libcuda.so.1 --exclude libvulkan.so.1"
-]
+repair-wheel-command = ""
 
 [tool.cibuildwheel.linux.environment]
 PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH"

@@ -75,31 +75,48 @@ jobs:
         include:
           - os: ubuntu-20.04
             arch: x86_64
-            build_cuda: true
-            build_vulkan: true
-            build_openmp: true
+
           - os: ubuntu-20.04
             arch: x86_64
-#          - os: ubuntu-20.04
-#            build_vulkan: false
-#            build_openmp: false
-#            arch: aarch64
+            build_cuda: true
+
+          - os: ubuntu-20.04
+            arch: x86_64
+            build_vulkan: true
+
+          - os: ubuntu-20.04
+            arch: x86_64
+            build_openmp: true
+
           - os: windows-2022
             arch: AMD64
-#          - os: windows-2022
-#            arch: ARM64
+
           - os: macos-11
             arch: x86_64
+
           - os: macos-11
             arch: arm64
+
           - os: macos-11
             arch: arm64
             build_vulkan: true
+
+          - os: macos-11
+            arch: arm64
             build_openmp: true
+
     outputs:
       LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
 
     steps:
+    # Enable tmate debugging of manually-triggered workflows if the input option was provided
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && inputs.debug_os == matrix.os && inputs.debug_arch == matrix.arch }}
+      with:
+        limit-access-to-actor: true
+        detached: ${{ inputs.debug_detached }}
+
     - uses: actions/checkout@v3
 
     - name: Free disk space
@@ -125,13 +142,6 @@ jobs:
         echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$PWD/build_host" | tee -a $GITHUB_ENV
         echo "LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}" | tee -a $GITHUB_ENV
 
-    # Enable tmate debugging of manually-triggered workflows if the input option was provided
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && inputs.debug_os == matrix.os && inputs.debug_arch == matrix.arch }}
-      with:
-        limit-access-to-actor: true
-        detached: ${{ inputs.debug_detached }}
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.9
@@ -139,7 +149,6 @@ jobs:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
         max-size: "5G"
         variant: ${{ matrix.os == 'windows-2022' && 'sccache' || 'ccache' }}
-        append-timestamp: false
 
     - name: Configure ccache dir on host
       id: configure_ccache_dir_on_host
@@ -149,6 +158,11 @@ jobs:
         mkdir -p $HOST_CCACHE_DIR
         echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_ENV
         echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
+
+    - name: Configure ccache on Mac
+      if: ${{ matrix.os == 'macos-11' }}
+      run: |
+        export PATH="/opt/homebrew/opt/ccache/libexec:$PATH"
 
     - name: Install Ninja
       uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17
@@ -189,12 +203,22 @@ jobs:
         LLVM_DATETIME: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
         LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
         MATRIX_OS: ${{ matrix.os }}
-        PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '2' || '2' }}
+        PARALLEL_LEVEL: '2'
+
+    - name: rename
+      shell: bash
+      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
+      run: |
+        if [ x"${{ matrix.os }}" == x"macos-11" ]; then
+          brew install rename
+        fi
+        rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
 
     - name: Download cache from container
       shell: bash
       if: (matrix.os == 'ubuntu-20.04') && (success() || failure())
       run: |
+        
         ccache -s
         HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         rm -rf $HOST_CCACHE_DIR
@@ -206,6 +230,19 @@ jobs:
       with:
         python-version: '3.10'
 
+    - name: Unzip bindings
+      shell: bash
+      id: unzip_bindings
+      run: |
+        unzip wheelhouse/mlir-*whl -x "mlir/bin/*" -d python_bindings
+        sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
+        sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
+        
+        # ninja -C cmake-build-debug -d explain
+        # no clue but the timestamps are wrong sometimes
+        find python_bindings/mlir -exec touch {} \;
+        cp -R scripts python_bindings
+
     - name: Build native_tools wheel
       shell: bash
       id: build_native_tools_wheel
@@ -214,41 +251,46 @@ jobs:
           if [ x"${{ matrix.os }}" == x"windows-2022" ]; then
             TOOL="$TOOL.exe"
           fi
-          unzip -j wheelhouse/mlir-17.0.0*whl "mlir/bin/$TOOL" -d native_tools/
+          unzip -j wheelhouse/mlir-*whl "mlir/bin/$TOOL" -d native_tools/
         done
         
-        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
-          PLAT="manylinux_2_17"
-        elif [ x"${{ matrix.os }}" == x"macos-11" ]; then
-          PLAT="macosx_11_0"
-        elif [ x"${{ matrix.os }}" == x"windows-2022" ]; then
-          PLAT="win"
-        fi
-        
         pip install wheel
-        PLAT=${PLAT}_$(echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+        
         pushd native_tools
-        python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
+        python setup.py bdist_wheel --dist-dir ../wheelhouse
         popd
 
-    - name: Unzip bindings
-      shell: bash
-      id: unzip_bindings
-      run: |
-        unzip wheelhouse/mlir-17.0.0*whl "mlir/python_packages/mlir_core/**" -d /tmp
-        mv /tmp/mlir/python_packages/mlir_core/mlir python_bindings
-
-    - uses: pypa/cibuildwheel@v2.13.0
-      env:
-        CIBW_ARCHS: ${{ matrix.arch }}
-        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-        LLVM_DATETIME: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
-        BUILD_CUDA: ${{ matrix.build_cuda }}
-        BUILD_OPENMP: ${{ matrix.build_openmp }}
-        BUILD_VULKAN: ${{ matrix.build_vulkan }}
+    - name: Upload wheels
+      if: success() || failure()
+      uses: actions/upload-artifact@v3
       with:
-        package-dir: python_bindings
-        output-dir: wheelhouse
+        path: wheelhouse/*.whl
+        name: build_artifact
+
+    - name: Free some space
+      shell: bash
+      run: |
+        rm -rf wheelhouse/*.whl
+        rm -rf llvm-project
+        rm -rf llvm.zip
+        rm -rf build
+
+    - name: cibuildwheel
+      shell: bash
+      run: |
+        pip install cibuildwheel
+        
+        pushd python_bindings
+        
+        CIBW_ARCHS=${{ matrix.arch }} \
+        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
+        LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
+        BUILD_CUDA=${{ matrix.build_cuda }} \
+        BUILD_OPENMP=${{ matrix.build_openmp }} \
+        BUILD_VULKAN=${{ matrix.build_vulkan }} \
+        cibuildwheel --output-dir ../wheelhouse
+
+        popd
 
     - name: Upload wheels
       if: success() || failure()

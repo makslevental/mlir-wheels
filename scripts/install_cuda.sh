@@ -9,6 +9,8 @@ if [[ x"${BUILD_CUDA}" == x"true" ]]; then
     exit 1
   fi
 
+  rm -rf cuda_12.2.0_535.54.03_linux.run
+
   CUDA_PATH=/usr/local/cuda
   echo "CUDA_PATH=${CUDA_PATH}"
   export CUDA_PATH=${CUDA_PATH}

@@ -18,19 +18,16 @@ def get_exe_suffix():
     return suffix
 
 
-# LLVM Compiler Infrastructure, release 17.0.0
-pstl_release_notes = open(
-    Path(__file__).parent.parent.absolute()
-    / "llvm-project"
-    / "pstl"
-    / "docs"
-    / "ReleaseNotes.rst"
+cmake_txt = open(
+    Path(__file__).parent.parent.absolute() / "llvm-project" / "llvm" / "CMakeLists.txt"
 ).read()
-release_version = re.findall(
-    r"LLVM Compiler Infrastructure, release (\d+\.\d+\.\d+)", pstl_release_notes
-)
-assert release_version, "couldn't find release version in pstl release notes"
-release_version = release_version[0]
+llvm_version = []
+for v in ["LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH"]:
+    vn = re.findall(rf"set\({v} (\d+)\)", cmake_txt)
+    assert vn, f"couldn't find {v} in cmake txt"
+    llvm_version.append(vn[0])
+
+
 commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
 now = datetime.now()
@@ -38,7 +35,7 @@ llvm_datetime = os.environ.get(
     "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
 )
 
-version = f"{release_version}.{llvm_datetime}+{commit_hash}"
+version = f"{llvm_version[0]}.{llvm_version[1]}.{llvm_version[2]}.{llvm_datetime}+{commit_hash}"
 
 data_files = []
 for bin in [
