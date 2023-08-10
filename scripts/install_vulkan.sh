@@ -16,6 +16,11 @@ if [[ x"$BUILD_VULKAN" == x"true" ]]; then
       com.lunarg.vulkan.volk \
       com.lunarg.vulkan.vma
   else
+    rm -rf Vulkan-Headers
+    rm -rf build-vulkan-headers
+    rm -rf build-vulkan-loader
+    rm -rf Vulkan-Loader
+
     # compile and install vulkan-headers
     git clone -b v1.3.239 https://github.com/KhronosGroup/Vulkan-Headers.git
     mkdir build-vulkan-headers

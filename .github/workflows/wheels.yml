@@ -212,7 +212,7 @@ jobs:
         if [ x"${{ matrix.os }}" == x"macos-11" ]; then
           brew install rename
         else
-          sudo apt install -y rename
+          sudo apt-get install -y rename
         fi
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
 
@@ -237,8 +237,8 @@ jobs:
       id: unzip_bindings
       run: |
         unzip wheelhouse/mlir-*whl -x "mlir/bin/*" -d python_bindings
-        sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
-        sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
+        sed -i.bak 's/FATAL_ERROR/WARNING/g' python_bindings/mlir/lib/cmake/llvm/LLVMExports.cmake
+        sed -i.bak 's/FATAL_ERROR/WARNING/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
         
         # ninja -C cmake-build-debug -d explain
         # no clue but the timestamps are wrong sometimes
@@ -256,10 +256,18 @@ jobs:
           unzip -j wheelhouse/mlir-*whl "mlir/bin/$TOOL" -d native_tools/
         done
         
-        pip install wheel
+        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
+          PLAT="manylinux_2_17"
+        elif [ x"${{ matrix.os }}" == x"macos-11" ]; then
+          PLAT="macosx_11_0"
+        elif [ x"${{ matrix.os }}" == x"windows-2022" ]; then
+          PLAT="win"
+        fi
         
+        pip install wheel
+        PLAT=${PLAT}_$(echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
         pushd native_tools
-        python setup.py bdist_wheel --dist-dir ../wheelhouse
+        python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
         popd
 
     - name: Upload wheels
