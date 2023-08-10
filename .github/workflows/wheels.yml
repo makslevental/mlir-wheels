@@ -212,7 +212,7 @@ jobs:
         if [ x"${{ matrix.os }}" == x"macos-11" ]; then
           brew install rename
         else
-          sudo apt install -y rename
+          sudo apt-get install -y rename
         fi
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
 
@@ -237,8 +237,8 @@ jobs:
       id: unzip_bindings
       run: |
         unzip wheelhouse/mlir-*whl -x "mlir/bin/*" -d python_bindings
-        sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
-        sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
+        sed -i.bak 's/FATAL_ERROR/WARNING/g' python_bindings/mlir/lib/cmake/llvm/LLVMExports.cmake
+        sed -i.bak 's/FATAL_ERROR/WARNING/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
         
         # ninja -C cmake-build-debug -d explain
         # no clue but the timestamps are wrong sometimes
