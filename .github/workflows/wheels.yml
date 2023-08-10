@@ -211,6 +211,8 @@ jobs:
       run: |
         if [ x"${{ matrix.os }}" == x"macos-11" ]; then
           brew install rename
+        else
+          sudo apt install -y rename
         fi
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
 
