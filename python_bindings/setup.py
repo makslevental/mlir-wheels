@@ -71,6 +71,7 @@ class CMakeBuild(build_ext):
         ]
 
         cmake_args_dict = get_cross_cmake_args()
+        cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
 
         if BUILD_CUDA:
             cmake_args += [
