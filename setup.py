@@ -86,7 +86,7 @@ class CMakeBuild(build_ext):
             "-DLLVM_INCLUDE_BENCHMARKS=OFF",
             "-DLLVM_INCLUDE_EXAMPLES=OFF",
             "-DLLVM_INCLUDE_RUNTIMES=OFF",
-            "-DLLVM_INCLUDE_TESTS=OFF",
+            "-DLLVM_INCLUDE_TESTS=ON",
             "-DLLVM_INCLUDE_TOOLS=ON",
             "-DLLVM_INCLUDE_UTILS=ON",
             "-DLLVM_INSTALL_UTILS=ON",
