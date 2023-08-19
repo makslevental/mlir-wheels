@@ -203,7 +203,7 @@ jobs:
         LLVM_DATETIME: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
         LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
         MATRIX_OS: ${{ matrix.os }}
-        PARALLEL_LEVEL: '2'
+        PARALLEL_LEVEL: ${{ matrix.os == 'windows-2022' && '1' || '2' }}
 
     - name: rename
       shell: bash
