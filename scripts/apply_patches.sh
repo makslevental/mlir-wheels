@@ -4,6 +4,7 @@ set -xe
 patches=(
   add_td_to_mlirpythoncapi_headers.patch
   remove_openmp_dep_on_clang_and_export_async_symbols.patch
+  register_test_pass.patch
 )
 
 for patch in "${patches[@]}"; do

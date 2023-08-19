@@ -76,13 +76,13 @@ pushd "$HERE/../native_tools"
 python setup.py bdist_wheel --dist-dir ../wheelhouse --plat "$PLAT"
 popd
 
-unzip $HERE/../wheelhouse/mlir-*whl -x "mlir/bin/*" -d ../python_bindings
+unzip $HERE/../wheelhouse/mlir-*whl -x "mlir/bin/*" -d $HERE/../python_bindings
 
 cp -R "$HERE/../scripts" "$HERE/../python_bindings"
 
 pushd "$HERE/../python_bindings"
-sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' mlir/lib/cmake/mlir/MLIRTargets.cmake
-sed -i.bak 's/message(FATAL_ERROR "The imported target/message(WARNING "The imported target/g' mlir/lib/cmake/mlir/MLIRTargets.cmake
+sed -i.bak 's/FATAL_ERROR/WARNING/g' mlir/lib/cmake/mlir/MLIRTargets.cmake
+sed -i.bak 's/FATAL_ERROR/WARNING/g' mlir/lib/cmake/llvm/LLVMExports.cmake
 
 find mlir -exec touch {} \;
 cibuildwheel --platform "$machine" --output-dir ../wheelhouse

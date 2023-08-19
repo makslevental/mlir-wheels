@@ -86,7 +86,7 @@ class CMakeBuild(build_ext):
             "-DLLVM_INCLUDE_BENCHMARKS=OFF",
             "-DLLVM_INCLUDE_EXAMPLES=OFF",
             "-DLLVM_INCLUDE_RUNTIMES=OFF",
-            "-DLLVM_INCLUDE_TESTS=ON",
+            "-DLLVM_INCLUDE_TESTS=OFF",
             "-DLLVM_INCLUDE_TOOLS=ON",
             "-DLLVM_INCLUDE_UTILS=ON",
             "-DLLVM_INSTALL_UTILS=ON",
@@ -94,6 +94,7 @@ class CMakeBuild(build_ext):
             "-DMLIR_ENABLE_BINDINGS_PYTHON=ON",
             "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
             "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
+            "-DMLIR_INCLUDE_TESTS=ON",
             # get rid of that annoying af git on the end of .17git
             "-DLLVM_VERSION_SUFFIX=",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
