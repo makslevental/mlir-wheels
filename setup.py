@@ -70,9 +70,10 @@ class CMakeBuild(build_ext):
         install_dir = extdir / "mlir"
         cfg = "Release"
 
-        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
+        cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
 
         cmake_args = [
+            f"-G {cmake_generator}",
             "-DBUILD_SHARED_LIBS=OFF",
             "-DLLVM_BUILD_BENCHMARKS=OFF",
             "-DLLVM_BUILD_EXAMPLES=OFF",
@@ -80,6 +81,7 @@ class CMakeBuild(build_ext):
             "-DLLVM_BUILD_TESTS=OFF",
             "-DLLVM_BUILD_TOOLS=ON",
             "-DLLVM_BUILD_UTILS=ON",
+            "-DLLVM_CCACHE_BUILD=ON",
             "-DLLVM_ENABLE_ASSERTIONS=ON",
             "-DLLVM_ENABLE_RTTI=ON",
             "-DLLVM_ENABLE_ZSTD=OFF",
@@ -104,13 +106,11 @@ class CMakeBuild(build_ext):
         ]
         if platform.system() == "Windows":
             cmake_args += [
-                "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
-                "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache",
-            ]
-        else:
-            cmake_args += [
-                "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
-                "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
+                "-DCMAKE_C_COMPILER=cl",
+                "-DCMAKE_CXX_COMPILER=cl",
+                "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
+                '-DCMAKE_C_FLAGS="-D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING"',
+                '-DCMAKE_CXX_FLAGS="-D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING"',
             ]
 
         cmake_args_dict = get_cross_cmake_args()

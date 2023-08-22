@@ -32,7 +32,7 @@ elif [ "$machine" == "macos" ]; then
   export BUILD_CUDA=false
 else
   export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
-  export MATRIX_OS=windows-2022
+  export MATRIX_OS=windows-2019
   export CIBW_ARCHS=AMD64
   export ARCH=AMD64
   export BUILD_CUDA=false
@@ -57,7 +57,7 @@ if [ -d "$HERE/../wheelhouse/.ccache" ]; then
 fi
 
 for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
-  if [ x"$MATRIX_OS" == x"windows-2022" ]; then
+  if [ x"$MATRIX_OS" == x"windows-2019" ]; then
     TOOL="$TOOL.exe"
   fi
   unzip -j "$HERE/../wheelhouse/"mlir-*whl "mlir/bin/$TOOL" -d "$HERE/../native_tools/"
@@ -67,7 +67,7 @@ if [ x"$MATRIX_OS" == x"ubuntu-20.04" ]; then
   PLAT="manylinux_2_17"
 elif [ x"$MATRIX_OS" == x"macos-11" ]; then
   PLAT="macosx_11_0"
-elif [ x"$MATRIX_OS" == x"windows-2022" ]; then
+elif [ x"$MATRIX_OS" == x"windows-2019" ]; then
   PLAT="win"
 fi
 
