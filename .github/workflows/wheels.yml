@@ -11,7 +11,7 @@ on:
       debug_os:
         description: 'which runner os to run the tmate action in (if the tmate action is run)'
         type: string
-        default: 'windows-2022'
+        default: 'windows-2019'
         required: false
       debug_arch:
         description: 'which runner arch to run the tmate action in (if the tmate action is run)'
@@ -88,7 +88,7 @@ jobs:
             arch: x86_64
             build_openmp: true
 
-          - os: windows-2022
+          - os: windows-2019
             arch: AMD64
 
           - os: macos-11
@@ -148,7 +148,7 @@ jobs:
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
         max-size: "5G"
-        variant: ${{ matrix.os == 'windows-2022' && 'sccache' || 'ccache' }}
+        variant: ${{ matrix.os == 'windows-2019' && 'sccache' || 'ccache' }}
 
     - name: Configure ccache dir on host
       id: configure_ccache_dir_on_host
@@ -250,7 +250,7 @@ jobs:
       id: build_native_tools_wheel
       run: |
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
-          if [ x"${{ matrix.os }}" == x"windows-2022" ]; then
+          if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
             TOOL="$TOOL.exe"
           fi
           unzip -j wheelhouse/mlir-*whl "mlir/bin/$TOOL" -d native_tools/
@@ -260,7 +260,7 @@ jobs:
           PLAT="manylinux_2_17"
         elif [ x"${{ matrix.os }}" == x"macos-11" ]; then
           PLAT="macosx_11_0"
-        elif [ x"${{ matrix.os }}" == x"windows-2022" ]; then
+        elif [ x"${{ matrix.os }}" == x"windows-2019" ]; then
           PLAT="win"
         fi
         
