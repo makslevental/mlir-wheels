@@ -61,14 +61,24 @@ class CMakeBuild(build_ext):
         install_dir = extdir
         cfg = "Release"
 
-        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
+        cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
 
         cmake_args = [
+            f"-G {cmake_generator}",
+            "-DLLVM_CCACHE_BUILD=ON",
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
+        if platform.system() == "Windows":
+            cmake_args += [
+                "-DCMAKE_C_COMPILER=cl",
+                "-DCMAKE_CXX_COMPILER=cl",
+                "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
+                '-DCMAKE_C_FLAGS="-D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING"',
+                '-DCMAKE_CXX_FLAGS="-D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING"',
+            ]
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
@@ -135,6 +145,10 @@ class CMakeBuild(build_ext):
 
         if sys.platform.startswith("darwin"):
             cmake_args += ["-DCMAKE_OSX_DEPLOYMENT_TARGET=11.6"]
+            # Cross-compile support for macOS - respect ARCHFLAGS if set
+            archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
+            if archs:
+                cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
 
         if "PARALLEL_LEVEL" not in os.environ:
             build_args += [f"-j{str(2 * os.cpu_count())}"]

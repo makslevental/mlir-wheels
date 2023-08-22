@@ -23,6 +23,7 @@ environment-pass = [
     "BUILD_CUDA",
     "BUILD_OPENMP",
     "BUILD_VULKAN",
+    "CMAKE_GENERATOR",
 ]
 before-all = [
     "{project}/scripts/docker_prepare_ccache.sh",
