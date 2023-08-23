@@ -66,6 +66,7 @@ class CMakeBuild(build_ext):
         cmake_args = [
             f"-G {cmake_generator}",
             "-DLLVM_CCACHE_BUILD=ON",
+            "-DMLIR_INCLUDE_TESTS=ON",
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DPython3_EXECUTABLE={sys.executable}",
@@ -76,8 +77,8 @@ class CMakeBuild(build_ext):
                 "-DCMAKE_C_COMPILER=cl",
                 "-DCMAKE_CXX_COMPILER=cl",
                 "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
-                '-DCMAKE_C_FLAGS="-D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING"',
-                '-DCMAKE_CXX_FLAGS="-D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING"',
+                '-DCMAKE_C_FLAGS=/MT',
+                '-DCMAKE_CXX_FLAGS=/MT',
             ]
 
         cmake_args_dict = get_cross_cmake_args()

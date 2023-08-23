@@ -13,6 +13,10 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
+if(POLICY CMP0091)
+  cmake_policy(SET CMP0091 NEW)
+endif()
+
 if(POLICY CMP0116)
   cmake_policy(SET CMP0116 NEW)
 endif()
@@ -28,6 +32,14 @@ set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 set(CMAKE_CXX_STANDARD
     17
     CACHE STRING "C++ standard to conform to")
+
+if(MSVC)
+  add_compile_options(
+    $<$<CONFIG:>:/MT> # ---------|
+    $<$<CONFIG:Debug>:/MTd> # ---|-- Statically link the runtime libraries
+    $<$<CONFIG:Release>:/MT> # --|
+  )
+endif()
 
 find_package(MLIR REQUIRED CONFIG)
 
