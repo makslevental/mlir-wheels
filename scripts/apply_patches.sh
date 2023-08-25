@@ -8,7 +8,9 @@ patches=(
   mscv.patch
 )
 
-for patch in "${patches[@]}"; do
-  ls "$LLVM_PROJECT_MAIN_SRC_DIR"
-  git apply --verbose --directory llvm-project patches/$patch --verbose
-done
+if [[ x"${APPLY_PATCHES}" == x"true" ]]; then
+  for patch in "${patches[@]}"; do
+    ls "$LLVM_PROJECT_MAIN_SRC_DIR"
+    git apply --verbose --directory llvm-project patches/$patch --verbose
+  done
+fi

@@ -28,6 +28,11 @@ on:
         type: string
         required: false
         default: ''
+      apply_patches:
+        description: 'whether to apply patches to source'
+        type: boolean
+        required: false
+        default: true
 
   pull_request:
   release:
@@ -217,6 +222,7 @@ jobs:
         MATRIX_OS: ${{ matrix.os }}
         CMAKE_GENERATOR: "Ninja"
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2019' && '2' || '2' }}
+        APPLY_PATCHES: ${{ matrix.apply_patches }}
 
     - name: rename
       shell: bash

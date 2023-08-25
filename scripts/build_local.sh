@@ -13,7 +13,7 @@ case "${unameOut}" in
 esac
 echo "${machine}"
 
-export BUILD_OPENMP=true
+export BUILD_OPENMP=false
 export BUILD_VULKAN=false
 
 if [ "$machine" == "linux" ]; then
@@ -22,7 +22,8 @@ if [ "$machine" == "linux" ]; then
   export CIBW_ARCHS=x86_64
   export ARCH=x86_64
   export PARALLEL_LEVEL=15
-  export BUILD_CUDA=true
+  export BUILD_CUDA=false
+  export APPLY_PATCHES=false
 elif [ "$machine" == "macos" ]; then
   export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=macos-11
