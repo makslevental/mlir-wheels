@@ -24,6 +24,7 @@ environment-pass = [
     "BUILD_OPENMP",
     "BUILD_VULKAN",
     "CMAKE_GENERATOR",
+    "CMAKE_ARGS",
 ]
 before-all = [
     "{project}/scripts/docker_prepare_ccache.sh",

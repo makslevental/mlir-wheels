@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 set -xe
 
-patches=(
-  add_td_to_mlirpythoncapi_headers.patch
-  remove_openmp_dep_on_clang_and_export_async_symbols.patch
-  register_test_pass.patch
-  mscv.patch
-)
+# note that space before slash is important
+PATCHES="\
+add_td_to_mlirpythoncapi_headers \
+remove_openmp_dep_on_clang_and_export_async_symbols \
+register_test_pass \
+"
 
 if [[ x"${APPLY_PATCHES}" == x"true" ]]; then
-  for patch in "${patches[@]}"; do
+  for PATCH in $PATCHES; do
+    echo "applying $PATCH"
     ls "$LLVM_PROJECT_MAIN_SRC_DIR"
-    git apply --verbose --directory llvm-project patches/$patch --verbose
+    git apply --verbose --directory llvm-project patches/$PATCH.patch --verbose
   done
 fi
+
+git apply --verbose --directory llvm-project patches/mscv.patch --verbose

@@ -43,6 +43,8 @@ environment-pass = [
     "MATRIX_OS",
     "PARALLEL_LEVEL",
     "CMAKE_GENERATOR",
+    "CMAKE_ARGS",
+    "APPLY_PATCHES",
 ]
 manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
 repair-wheel-command = ""

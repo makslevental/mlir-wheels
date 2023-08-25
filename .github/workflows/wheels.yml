@@ -222,7 +222,7 @@ jobs:
         MATRIX_OS: ${{ matrix.os }}
         CMAKE_GENERATOR: "Ninja"
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2019' && '2' || '2' }}
-        APPLY_PATCHES: ${{ matrix.apply_patches }}
+        APPLY_PATCHES: ${{ inputs.apply_patches }}
 
     - name: rename
       shell: bash

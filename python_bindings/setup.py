@@ -113,6 +113,9 @@ class CMakeBuild(build_ext):
             assert os.path.exists(native_tools_dir), "native_tools_dir doesn't exist"
             cmake_args += [f"-DLLVM_NATIVE_TOOL_DIR={native_tools_dir}"]
 
+        if "CMAKE_ARGS" in os.environ:
+            cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
+
         build_args = []
         if self.compiler.compiler_type != "msvc":
             if not cmake_generator or cmake_generator == "Ninja":
