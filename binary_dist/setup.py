@@ -4,6 +4,8 @@
 
 from setuptools import find_namespace_packages, setup, Distribution
 from pathlib import Path
+import re
+import os
 
 class BinaryDistribution(Distribution):
     """Distribution which always forces a binary package with platform name"""
@@ -19,7 +21,7 @@ llvm_config = open(
     MLIR_INSTALL_ABS_PATH / "include" / "llvm" / "Config" / "llvm-config.h"
 ).read()
 release_version = re.findall(
-    r'#define LLVM_VERSION_STRING "(\d+\.\d+\.\d+)"', llvm_config
+    r'#define LLVM_VERSION_STRING "(\d+\.\d+\.\d+)[A-Za-z]*"', llvm_config
 )
 assert release_version, "couldn't find release version in llvm-config.h"
 release_version = release_version[0]
