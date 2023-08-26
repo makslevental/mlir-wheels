@@ -30,9 +30,9 @@ on:
         default: ''
       apply_patches:
         description: 'whether to apply patches to source'
-        type: boolean
+        type: string
         required: false
-        default: true
+        default: 'true'
 
   pull_request:
   release:
@@ -222,7 +222,7 @@ jobs:
         MATRIX_OS: ${{ matrix.os }}
         CMAKE_GENERATOR: "Ninja"
         PARALLEL_LEVEL: ${{ matrix.os == 'windows-2019' && '2' || '2' }}
-        APPLY_PATCHES: ${{ inputs.apply_patches }}
+        APPLY_PATCHES: ${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }}
 
     - name: rename
       shell: bash
@@ -234,6 +234,11 @@ jobs:
           sudo apt-get install -y rename
         fi
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
+
+    - name: rename
+      if: ${{ matrix.os == 'windows-2019' }}
+      run: |
+        ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
 
     - name: Download cache from container
       shell: bash

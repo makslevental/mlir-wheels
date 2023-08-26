@@ -12,8 +12,8 @@ if [[ x"${APPLY_PATCHES}" == x"true" ]]; then
   for PATCH in $PATCHES; do
     echo "applying $PATCH"
     ls "$LLVM_PROJECT_MAIN_SRC_DIR"
-    git apply --verbose --directory llvm-project patches/$PATCH.patch --verbose
+    git apply --ignore-space-change --ignore-whitespace --verbose --directory llvm-project patches/$PATCH.patch
   done
 fi
 
-git apply --verbose --directory llvm-project patches/mscv.patch --verbose
+git apply --ignore-space-change --ignore-whitespace --verbose --directory llvm-project patches/mscv.patch

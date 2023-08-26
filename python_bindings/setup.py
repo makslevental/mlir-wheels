@@ -77,8 +77,8 @@ class CMakeBuild(build_ext):
                 "-DCMAKE_C_COMPILER=cl",
                 "-DCMAKE_CXX_COMPILER=cl",
                 "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
-                '-DCMAKE_C_FLAGS=/MT',
-                '-DCMAKE_CXX_FLAGS=/MT',
+                "-DCMAKE_C_FLAGS=/MT",
+                "-DCMAKE_CXX_FLAGS=/MT",
             ]
 
         cmake_args_dict = get_cross_cmake_args()
@@ -216,7 +216,7 @@ commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 now = datetime.now()
 llvm_datetime = os.environ.get(
     "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
-)
+).replace(".", "")
 
 
 version = f"{release_version}.{llvm_datetime}+{commit_hash}"

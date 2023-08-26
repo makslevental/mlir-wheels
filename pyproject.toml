@@ -66,8 +66,8 @@ PATH = "/opt/homebrew/opt/ccache/libexec:$PATH"
 [tool.cibuildwheel.windows]
 #before-build = "pip install delvewheel"
 before-build = [
-    "{project}\\scripts\\install_vulkan.sh",
-    "{project}\\scripts\\apply_patches.sh",
+    "bash {project}\\scripts\\install_vulkan.sh",
+    "bash {project}\\scripts\\apply_patches.sh",
 ]
 # repair-wheel-command = 'delvewheel repair --add-path "$(realpath $(dirname $(find . -name MLIR-C.lib | tail -n1)))" -L \python_packages\mlir_core\mlir\_mlir_libs -w {dest_dir} {wheel}'
 repair-wheel-command = ""
