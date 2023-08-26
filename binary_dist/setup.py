@@ -6,6 +6,7 @@ from setuptools import find_namespace_packages, setup, Distribution
 from pathlib import Path
 import re
 import os
+from datetime import datetime
 
 class BinaryDistribution(Distribution):
     """Distribution which always forces a binary package with platform name"""
