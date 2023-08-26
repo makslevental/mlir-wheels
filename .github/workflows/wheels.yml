@@ -67,6 +67,13 @@ jobs:
           DATETIME=$(date +"%Y.%m.%d.%H")
           echo "LLVM_DATETIME=${DATETIME}" | tee -a $GITHUB_OUTPUT
 
+  build_aarch64_wheels:
+    needs: get_llvm_project_commit
+    uses: makslevental/mlir-wheels/.github/workflows/build_arm64.yml@arm64_wheels
+    with:
+      llvm_commit: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+      llvm_datetime: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
+
   build_wheels:
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda && 'cuda' || '' }} ${{ matrix.build_vulkan && 'vulkan' || '' }} ${{ matrix.build_openmp && 'openmp' || '' }}
 
@@ -338,7 +345,7 @@ jobs:
 
     name: Upload wheels
 
-    needs: [build_wheels]
+    needs: [build_wheels, build_aarch64_wheels]
 
     runs-on: ubuntu-latest
 #    environment: pypi
