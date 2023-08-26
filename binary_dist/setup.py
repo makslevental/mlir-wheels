@@ -33,6 +33,8 @@ llvm_datetime = os.environ.get(
     "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
 ).replace(".", "")
 
+version = f"{release_version}.{llvm_datetime}+{commit_hash}"
+
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(
     name="mlir",

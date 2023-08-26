@@ -4,6 +4,7 @@ requires = [
     "wheel",
     "ninja",
     "cmake>=3.12",
+    "mlir-native-tools",
     "pybind11[global]>=2.10.4",
     "numpy",
     "dataclasses"
@@ -13,6 +14,7 @@ build-backend = "setuptools.build_meta"
 [tool.cibuildwheel]
 build-verbosity = 3
 build = "cp311-*"
+environment = { PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
 before-build = [
     "rm -rf {project}/build",
     "rm -rf *egg*",

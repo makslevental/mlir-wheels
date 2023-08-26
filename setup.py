@@ -22,12 +22,11 @@ def get_cross_cmake_args():
     cmake_args = {}
 
     def native_tools():
-        native_tools_dir = os.getenv("LLVM_NATIVE_TOOL_DIR")
+        native_tools_dir = Path(sys.prefix).absolute() / "bin"
         assert native_tools_dir is not None, "native_tools_dir missing"
         assert os.path.exists(native_tools_dir), "native_tools_dir doesn't exist"
         cmake_args += [f"-DLLVM_NATIVE_TOOL_DIR={native_tools_dir}"]
         cmake_args["LLVM_USE_HOST_TOOLS"] = "ON"
-
 
     CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
     if CIBW_ARCHS in {"arm64", "aarch64", "ARM64"}:

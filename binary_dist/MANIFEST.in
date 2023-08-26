@@ -6,3 +6,5 @@ recursive-include mlir *.pyd*
 recursive-include mlir *.pyi*
 recursive-include mlir *.h
 recursive-include mlir *.td
+recursive-include mlir *
+recursive-include mlir *.*
