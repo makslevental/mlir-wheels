@@ -3,7 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from setuptools import find_namespace_packages, setup, Distribution
-
+from pathlib import Path
 
 class BinaryDistribution(Distribution):
     """Distribution which always forces a binary package with platform name"""
