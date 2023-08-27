@@ -12,6 +12,10 @@ from pprint import pprint
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
+import mlir
+
+MLIR_INSTALL_ABS_PATH = Path(mlir.__path__[0])
+
 
 def check_env(build):
     return os.environ.get(build, 0) in {"1", "true", "True", "ON", "YES"}
@@ -102,16 +106,6 @@ class CMakeBuild(build_ext):
                 raise ValueError(f"unknown location for vulkan lib")
             cmake_args += [f"-DVulkan_LIBRARY={vulkan_library}"]
 
-        if (
-            platform.system() == "Linux"
-            and "AArch64" in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]
-        ):
-            # assumes mlir-native-tools has been installed
-            native_tools_dir = Path(sys.prefix) / "bin"
-            assert native_tools_dir is not None, "native_tools_dir missing"
-            assert os.path.exists(native_tools_dir), "native_tools_dir doesn't exist"
-            cmake_args += [f"-DLLVM_NATIVE_TOOL_DIR={native_tools_dir}"]
-
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
@@ -198,8 +192,6 @@ class CMakeBuild(build_ext):
                 dst_path = mlir_libs_dir / os.path.basename(shlib_fp)
                 shutil.copyfile(shlib_fp, dst_path, follow_symlinks=True)
 
-
-MLIR_INSTALL_ABS_PATH = Path(__file__).parent.absolute() / "mlir"
 
 # #define LLVM_VERSION_STRING "18.0.0"
 llvm_config = open(

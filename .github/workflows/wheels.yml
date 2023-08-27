@@ -67,14 +67,14 @@ jobs:
           DATETIME=$(date +"%Y.%m.%d.%H")
           echo "LLVM_DATETIME=${DATETIME}" | tee -a $GITHUB_OUTPUT
 
-  build_aarch64_wheels:
-    needs: get_llvm_project_commit
-    uses: makslevental/mlir-wheels/.github/workflows/build_arm64.yml@arm64_wheels
-    with:
-      llvm_commit: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-      llvm_datetime: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
+#  build_aarch64_wheels:
+#    needs: get_llvm_project_commit
+#    uses: makslevental/mlir-wheels/.github/workflows/build_arm64.yml@arm64_wheels
+#    with:
+#      llvm_commit: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+#      llvm_datetime: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
 
-  build_wheels:
+  build_build_distro_wheel:
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda && 'cuda' || '' }} ${{ matrix.build_vulkan && 'vulkan' || '' }} ${{ matrix.build_openmp && 'openmp' || '' }}
 
     needs: get_llvm_project_commit
@@ -119,9 +119,6 @@ jobs:
           - os: macos-11
             arch: arm64
             build_openmp: true
-
-    outputs:
-      LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
 
     steps:
     # Enable tmate debugging of manually-triggered workflows if the input option was provided
@@ -295,20 +292,6 @@ jobs:
         ls -la $HOST_CCACHE_DIR
         ccache -s
 
-    - name: Unzip bindings
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      shell: bash
-      id: unzip_bindings
-      run: |
-        unzip wheelhouse/mlir-*whl -x "mlir/bin/*" -d python_bindings
-        sed -i.bak 's/FATAL_ERROR/WARNING/g' python_bindings/mlir/lib/cmake/llvm/LLVMExports.cmake
-        sed -i.bak 's/FATAL_ERROR/WARNING/g' python_bindings/mlir/lib/cmake/mlir/MLIRTargets.cmake
-        
-        # ninja -C cmake-build-debug -d explain
-        # no clue but the timestamps are wrong sometimes
-        find python_bindings/mlir -exec touch {} \;
-        cp -R scripts python_bindings
-
     - name: Build native_tools wheel
       working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
@@ -352,36 +335,8 @@ jobs:
         rm -rf llvm.zip
         rm -rf build
 
-    - name: cibuildwheel python bindings
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
-      shell: bash
-      run: |
-        pushd python_bindings
-        
-        CIBW_ARCHS=${{ matrix.arch }} \
-        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
-        LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
-        BUILD_CUDA=${{ matrix.build_cuda }} \
-        BUILD_OPENMP=${{ matrix.build_openmp }} \
-        BUILD_VULKAN=${{ matrix.build_vulkan }} \
-        CMAKE_GENERATOR=Ninja \
-        cibuildwheel --output-dir ../wheelhouse
-
-        popd
-
-    - name: Upload wheels
-      if: success() || failure()
-      uses: actions/upload-artifact@v3
-      with:
-        path: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
-        name: build_artifact
-
-  upload_wheels:
-
-    name: Upload wheels
-
-    needs: [build_wheels, build_aarch64_wheels]
+  upload_distro_wheels:
+    needs: [build_build_distro_wheel, get_llvm_project_commit]
 
     runs-on: ubuntu-latest
 #    environment: pypi
@@ -400,7 +355,7 @@ jobs:
       - name: Set up a release page
         id: setup_release
         run: |
-          LLVM_PROJECT_COMMIT="${{ needs.build_wheels.outputs.LLVM_PROJECT_COMMIT }}"
+          LLVM_PROJECT_COMMIT="${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"
           echo "MLIR Distribution created at $(date), build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
           echo "tag_name=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
           echo "release_title=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
@@ -409,6 +364,158 @@ jobs:
         uses: ncipollo/release-action@v1.12.0
         with:
           artifacts: "dist/*.whl,dist/*.tar.xz"
+          bodyFile: body.md
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          tag: "latest"
+          name: "latest"
+          removeArtifacts: false
+          allowUpdates: true
+          replacesArtifacts: true
+          makeLatest: true
+
+      - name: Release current commit
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          owner: makslevental
+          repo: wheels
+          artifacts: "dist/*.whl"
+          token: "${{ secrets.WHEELS_REPO }}"
+          tag: "i"
+          name: "i"
+          removeArtifacts: false
+          allowUpdates: true
+          replacesArtifacts: true
+          makeLatest: true
+
+  build_python_bindings_wheels:
+    needs: [upload_distro_wheels, get_llvm_project_commit]
+    continue-on-error: true
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            arch: x86_64
+
+          - os: ubuntu-20.04
+            arch: aarch64
+
+          - os: ubuntu-20.04
+            arch: x86_64
+            build_cuda: true
+
+          - os: ubuntu-20.04
+            arch: x86_64
+            build_vulkan: true
+
+          - os: ubuntu-20.04
+            arch: x86_64
+            build_openmp: true
+
+          - os: windows-2019
+            arch: AMD64
+
+          - os: macos-11
+            arch: x86_64
+
+          - os: macos-11
+            arch: arm64
+
+          - os: macos-11
+            arch: arm64
+            build_vulkan: true
+
+          - os: macos-11
+            arch: arm64
+            build_openmp: true
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: cibuildwheel python bindings
+        if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
+        shell: bash
+        run: |
+          pushd python_bindings
+          
+          CIBW_ARCHS=${{ matrix.arch }} \
+          LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
+          LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
+          BUILD_CUDA=${{ matrix.build_cuda }} \
+          BUILD_OPENMP=${{ matrix.build_openmp }} \
+          BUILD_VULKAN=${{ matrix.build_vulkan }} \
+          CMAKE_GENERATOR=Ninja \
+          cibuildwheel --output-dir ../wheelhouse
+          
+          popd
+
+      - name: cibuildwheel python bindings aarch64
+        uses: uraimo/run-on-arch-action@v2
+        if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu-20.04
+          dockerRunArgs: |
+            --volume "${PWD}:/workspace"
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y ninja-build build-essential cmake python3 python3-pip python-is-python3
+          run: |
+            cd /workspace/python_bindings
+            
+            pip install cibuildwheel
+            
+            CIBW_ARCHS=${{ matrix.arch }} \
+            LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
+            LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
+            BUILD_CUDA=${{ matrix.build_cuda }} \
+            BUILD_OPENMP=${{ matrix.build_openmp }} \
+            BUILD_VULKAN=${{ matrix.build_vulkan }} \
+            CMAKE_GENERATOR=Ninja \
+            cibuildwheel --output-dir ../wheelhouse
+
+      - name: Upload wheels
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          path: wheelhouse/*.whl
+          name: build_artifact
+
+
+  upload_bindings_wheels:
+    needs: [build_python_bindings_wheels, get_llvm_project_commit]
+
+    runs-on: ubuntu-latest
+    #    environment: pypi
+    #    if: github.event_name == 'release' && github.event.action == 'published'
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: build_artifact
+          path: dist
+
+      - name: Set up a release page
+        id: setup_release
+        run: |
+          LLVM_PROJECT_COMMIT="${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"
+          echo "MLIR Distribution created at $(date), build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
+          echo "tag_name=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
+          echo "release_title=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
+
+      - name: Release current commit
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          artifacts: "dist/*.whl"
           bodyFile: body.md
           token: "${{ secrets.GITHUB_TOKEN }}"
           tag: "latest"
