@@ -17,7 +17,6 @@ jobs:
   build:
 
     name: Build distro of MLIR
-    #    runs-on: ${{ (matrix.os == 'windows-2019' && 'self-hosted') || matrix.os }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
@@ -71,39 +70,41 @@ jobs:
       - name: Set workspace root
         id: workspace_root
         shell: bash
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
-            mkdir -p /C/a
-            echo "WORKSPACE_ROOT=/C/a" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+            WORKSPACE_ROOT="/C/a"
           else
-            echo "WORKSPACE_ROOT=${GITHUB_WORKSPACE}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+            WORKSPACE_ROOT=${GITHUB_WORKSPACE}
           fi
-
-      - name: Checkout this repo
-        uses: actions/checkout@v3
-        with:
-          path: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+          
+          mkdir -p $WORKSPACE_ROOT
+          git clone -b $BRANCH_NAME https://github.com/${{ github.repository }}.git $WORKSPACE_ROOT
+          
+          if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
+            WORKSPACE_ROOT="C:\a"
+          fi
+          echo "WORKSPACE_ROOT=$WORKSPACE_ROOT" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
 
       - name: Get LLVM
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         shell: bash
         run: |
-          cd $WORKSPACE_ROOT
-          
           curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ inputs.llvm_commit }} -o llvm.zip
           unzip -q llvm.zip
           LLVM_PROJECT_COMMIT=${{ inputs.llvm_commit }}
           mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
-          LLVM_INSTALL_DIR_NAME=binary_dist/mlir
           
           echo "LLVM_PROJECT_INSTALL_DIR=$WORKSPACE_ROOT/binary_dist/mlir" | tee -a $GITHUB_ENV
           echo "LLVM_PROJECT_COMMIT=$LLVM_PROJECT_COMMIT" | tee -a $GITHUB_ENV
           echo "LLVM_PROJECT_MAIN_SRC_DIR=$PWD/llvm-project" | tee -a $GITHUB_ENV
           echo "LLVM_PROJECT_MAIN_BINARY_DIR=${WORKSPACE_ROOT}/build" | tee -a $GITHUB_ENV
-          echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$PWD/build_host" | tee -a $GITHUB_ENV
           echo "LLVM_DATETIME=${{ inputs.llvm_datetime }}" | tee -a $GITHUB_ENV
 
       - name: Install Python depends
         shell: bash
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         run: |
           python -m pip install -r ${LLVM_PROJECT_MAIN_SRC_DIR}/mlir/python/requirements.txt
 
@@ -125,6 +126,7 @@ jobs:
             g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
 
       - name: Choose compiler and set env vars
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         shell: bash
         run: |
           if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
@@ -137,44 +139,23 @@ jobs:
             echo "GENERATOR=Ninja" | tee -a $GITHUB_ENV
           fi
 
-      - name: Build host llvmtblgen/mlirtblgen
+      - name: Install native-tools
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         shell: bash
         run: |
-          cd $WORKSPACE_ROOT
-          
-          if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
-            export CXX_COMPILER=g++
-            export C_COMPILER=gcc
-          fi
-          cmake \
-            -G "$GENERATOR" \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=$CXX_COMPILER \
-            -DCMAKE_CXX_FLAGS="-O2 ${STATIC_FLAGS}" \
-            -DCMAKE_C_COMPILER=$C_COMPILER \
-            -DLLVM_ENABLE_PROJECTS=mlir \
-            -DLLVM_ENABLE_TERMINFO=OFF \
-            -DLLVM_ENABLE_ZLIB=OFF \
-            -DLLVM_ENABLE_ZSTD=OFF \
-            -DLLVM_TARGETS_TO_BUILD=X86 \
-            -S${LLVM_PROJECT_MAIN_SRC_DIR}/llvm \
-            -B${LLVM_PROJECT_HOST_MAIN_BINARY_DIR}
-          
-          cmake --build ${LLVM_PROJECT_HOST_MAIN_BINARY_DIR} \
-            --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll -j 20
+          pip install mlir-native-tools -f https://makslevental.github.io/wheels
+          echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$(python -c 'import sys; print(sys.prefix)')/bin" | tee -a $GITHUB_ENV
 
       - name: Apply patches
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         shell: bash
         run: |
-          cd $WORKSPACE_ROOT
           APPLY_PATCHES=true ./scripts/apply_patches.sh
 
       - name: Configure CMake
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         shell: bash
         run: |
-          cd $WORKSPACE_ROOT
-          
           LLVM_ENABLE_PROJECTS="llvm;mlir"
           
           CMAKE_CONFIGS="\
@@ -225,39 +206,39 @@ jobs:
             cmake $CMAKE_CONFIGS \
                 -G "$GENERATOR" \
                 -DLLVM_USE_HOST_TOOLS=ON \
-                -DLLVM_TABLEGEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/llvm-tblgen \
-                -DMLIR_LINALG_ODS_YAML_GEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-linalg-ods-yaml-gen \
-                -DMLIR_LINALG_ODS_YAML_GEN_EXE=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-linalg-ods-yaml-gen \
-                -DMLIR_PDLL_TABLEGEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-pdll \
-                -DMLIR_TABLEGEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/bin/mlir-tblgen \
+                -DLLVM_TABLEGEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/llvm-tblgen \
+                -DMLIR_LINALG_ODS_YAML_GEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/mlir-linalg-ods-yaml-gen \
+                -DMLIR_LINALG_ODS_YAML_GEN_EXE=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/mlir-linalg-ods-yaml-gen \
+                -DMLIR_PDLL_TABLEGEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/mlir-pdll \
+                -DMLIR_TABLEGEN=$LLVM_PROJECT_HOST_MAIN_BINARY_DIR/mlir-tblgen \
                 -DCMAKE_CXX_FLAGS="-O2 ${STATIC_FLAGS}" \
                 -S${LLVM_PROJECT_MAIN_SRC_DIR}/llvm \
                 -B${LLVM_PROJECT_MAIN_BINARY_DIR}
           fi
 
       - name: Build distro
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         shell: bash
         run: |
-          cd $WORKSPACE_ROOT
           cmake --build ${LLVM_PROJECT_MAIN_BINARY_DIR} --target install -j
           ccache -s
 
-      - name: Build MLIR Python bindings wheel
+      - name: Build MLIR wheel
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}/binary_dist
         shell: bash
         run: |
-          cd $WORKSPACE_ROOT/binary_dist
-          
           python -m pip install wheel
           if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
             PLATFORM_NAME="manylinux2014"
             ARCH=aarch64
           fi
           
-          mkdir -p $GITHUB_WORKSPACE/wheelhouse
-          cp __init__.py mlir/
-          python setup.py bdist_wheel --plat-name "${PLATFORM_NAME}_${ARCH}" --dist-dir $GITHUB_WORKSPACE/wheelhouse
+          mkdir -p $WORKSPACE_ROOT/wheelhouse
+          touch mlir/__init__.py
+          python setup.py bdist_wheel --plat-name "${PLATFORM_NAME}_${ARCH}" --dist-dir $WORKSPACE_ROOT/wheelhouse
 
       - name: rename
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         shell: bash
         if: ${{ matrix.os == 'ubuntu-20.04' }}
         run: |
@@ -265,6 +246,7 @@ jobs:
           rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
 
       - name: rename
+        working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
         if: ${{ matrix.os == 'windows-2019' }}
         run: |
           ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
@@ -273,5 +255,5 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          path: wheelhouse/*.whl
+          path: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
           name: build_artifact

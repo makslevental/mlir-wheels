@@ -53,8 +53,8 @@ def get_cross_cmake_args():
         if ARCH == "AArch64":
             cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "aarch64-linux-gnu"
             cmake_args["LLVM_HOST_TRIPLE"] = "aarch64-linux-gnu"
-            cmake_args["C_COMPILER"] = "aarch64-linux-gnu-gcc"
-            cmake_args["CXX_COMPILER"] = "aarch64-linux-gnu-g++"
+            cmake_args["CMAKE_C_COMPILER"] = "aarch64-linux-gnu-gcc"
+            cmake_args["CMAKE_CXX_COMPILER"] = "aarch64-linux-gnu-g++"
             cmake_args["CMAKE_CXX_FLAGS"] = "-static-libgcc -static-libstdc++"
             native_tools()
         elif ARCH == "X86":

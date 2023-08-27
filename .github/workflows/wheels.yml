@@ -132,7 +132,26 @@ jobs:
         limit-access-to-actor: true
         detached: ${{ inputs.debug_detached }}
 
-    - uses: actions/checkout@v3
+    - name: Set workspace root
+      id: workspace_root
+      shell: bash
+      env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+      run: |
+        if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
+          WORKSPACE_ROOT="/C/a"
+        else
+          WORKSPACE_ROOT=${GITHUB_WORKSPACE}
+        fi
+        
+        mkdir -p $WORKSPACE_ROOT
+        git clone -b $BRANCH_NAME https://github.com/${{ github.repository }}.git $WORKSPACE_ROOT
+        
+        if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
+          WORKSPACE_ROOT="C:\a"
+        fi
+        echo "WORKSPACE_ROOT=$WORKSPACE_ROOT" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+
 
     - uses: ilammy/msvc-dev-cmd@v1.4.1
       if: ${{ matrix.os == 'windows-2019' }}
@@ -163,6 +182,7 @@ jobs:
         python-version: '3.11'
 
     - name: Get LLVM
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
         curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
@@ -171,9 +191,7 @@ jobs:
         mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
         echo "LLVM_PROJECT_COMMIT=$LLVM_PROJECT_COMMIT" | tee -a $GITHUB_ENV
         echo "LLVM_PROJECT_MAIN_SRC_DIR=$PWD/llvm-project" | tee -a $GITHUB_ENV
-        echo "LLVM_PROJECT_HOST_MAIN_BINARY_DIR=$PWD/build_host" | tee -a $GITHUB_ENV
         echo "LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}" | tee -a $GITHUB_ENV
-
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.9
@@ -182,6 +200,7 @@ jobs:
         max-size: "5G"
 
     - name: Configure ccache dir on host
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       id: configure_ccache_dir_on_host
       if: ${{ matrix.os == 'ubuntu-20.04' }}
       run: |
@@ -198,30 +217,6 @@ jobs:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17
 
-    - name: Build host llvm-tblgen/mlir-tblgen
-      shell: bash
-      id: build_host_tools
-      if: ${{ matrix.arch == 'aarch64' || matrix.arch == 'arm64' || matrix.arch == 'ARM64' }}
-      run: |
-        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
-          export "STATIC_FLAGS=-static-libgcc -static-libstdc++"
-        fi
-        cmake \
-          -G Ninja \
-          -DBUILD_SHARED_LIBS=OFF \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_CXX_FLAGS="-O2 ${STATIC_FLAGS}" \
-          -DLLVM_ENABLE_PROJECTS=mlir \
-          -DLLVM_ENABLE_TERMINFO=OFF \
-          -DLLVM_ENABLE_ZLIB=OFF \
-          -DLLVM_ENABLE_ZSTD=OFF \
-          -DLLVM_TARGETS_TO_BUILD=X86 \
-          -S${LLVM_PROJECT_MAIN_SRC_DIR}/llvm \
-          -B${LLVM_PROJECT_HOST_MAIN_BINARY_DIR}
-
-        cmake --build ${LLVM_PROJECT_HOST_MAIN_BINARY_DIR} \
-          --target llvm-tblgen mlir-tblgen mlir-linalg-ods-yaml-gen mlir-pdll llvm-config -j 20
-
     - name: Install cross-compilation toolchain
       if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
       run: |
@@ -229,30 +224,34 @@ jobs:
         sudo apt-get install -y binutils-aarch64-linux-gnu \
           g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
 
-    - uses: pypa/cibuildwheel@v2.13.0
+    - name: cibuildwheel
+      shell: bash
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
-      env:
-        BUILD_CUDA: ${{ matrix.build_cuda }}
-        BUILD_OPENMP: ${{ matrix.build_openmp }}
-        BUILD_VULKAN: ${{ matrix.build_vulkan }}
-        CIBW_ARCHS: ${{ matrix.arch }}
-        HOST_CCACHE_DIR: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
-        LLVM_NATIVE_TOOL_DIR: ${{ matrix.arch == 'aarch64' && '/project/build_host/bin' || '' }}
-        LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-        LLVM_DATETIME: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
-        LLVM_PROJECT_MAIN_SRC_DIR: ${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }}
-        MATRIX_OS: ${{ matrix.os }}
-        CMAKE_GENERATOR: "Ninja"
-        PARALLEL_LEVEL: ${{ matrix.os == 'windows-2019' && '2' || '2' }}
-        APPLY_PATCHES: ${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }}
+      run: |
+        pip install cibuildwheel
+        
+        PIP_FIND_LINKS="https://makslevental.github.io/wheels" \
+        BUILD_CUDA=${{ matrix.build_cuda }} \
+        BUILD_OPENMP=${{ matrix.build_openmp }} \
+        BUILD_VULKAN=${{ matrix.build_vulkan }} \
+        CIBW_ARCHS=${{ matrix.arch }} \
+        HOST_CCACHE_DIR=${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }} \
+        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
+        LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
+        LLVM_PROJECT_MAIN_SRC_DIR=${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }} \
+        MATRIX_OS=${{ matrix.os }} \
+        CMAKE_GENERATOR="Ninja" \
+        PARALLEL_LEVEL=${{ matrix.os == 'windows-2019' && '2' || '2' }} \
+        APPLY_PATCHES=${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }} \
+        cibuildwheel --output-dir wheelhouse
 
     - name: build aarch ubuntu wheel
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
       if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
       run: |
-        
-        pip install mlir-native-tools -f https://makslevental.github.io/wheels
-        
+        PIP_FIND_LINKS="https://makslevental.github.io/wheels" \
         CIBW_ARCHS=${{ matrix.arch }} \
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
         LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
@@ -263,6 +262,7 @@ jobs:
         pip wheel . -v -w wheelhouse
 
     - name: rename
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
       if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
       run: |
@@ -278,15 +278,16 @@ jobs:
         fi
 
     - name: rename
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       if: ${{ matrix.os == 'windows-2019' }}
       run: |
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
 
     - name: Download cache from container
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
       if: (matrix.os == 'ubuntu-20.04' && matrix.arch == 'x86_64') && (success() || failure())
       run: |
-        
         ccache -s
         HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         rm -rf $HOST_CCACHE_DIR
@@ -295,6 +296,7 @@ jobs:
         ccache -s
 
     - name: Unzip bindings
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
       id: unzip_bindings
       run: |
@@ -308,6 +310,7 @@ jobs:
         cp -R scripts python_bindings
 
     - name: Build native_tools wheel
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
       if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
       id: build_native_tools_wheel
@@ -337,10 +340,11 @@ jobs:
       if: success() || failure()
       uses: actions/upload-artifact@v3
       with:
-        path: wheelhouse/*.whl
+        path: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
         name: build_artifact
 
     - name: Free some space
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
         rm -rf wheelhouse/*.whl
@@ -349,11 +353,10 @@ jobs:
         rm -rf build
 
     - name: cibuildwheel python bindings
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
       shell: bash
       run: |
-        pip install cibuildwheel
-        
         pushd python_bindings
         
         CIBW_ARCHS=${{ matrix.arch }} \
@@ -371,7 +374,7 @@ jobs:
       if: success() || failure()
       uses: actions/upload-artifact@v3
       with:
-        path: wheelhouse/*.whl
+        path: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
         name: build_artifact
 
   upload_wheels:

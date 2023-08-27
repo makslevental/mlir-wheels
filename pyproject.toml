@@ -6,11 +6,13 @@ requires = [
     "cmake>=3.12",
     "pybind11[global]>=2.10.4",
     "numpy",
-    "dataclasses"
+    "dataclasses",
+    "mlir-native-tools",
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
+environment = { PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
 build-verbosity = 3
 build = "cp311-*"
 before-build = [
@@ -36,7 +38,6 @@ environment-pass = [
     "BUILD_VULKAN",
     "CIBW_ARCHS",
     "HOST_CCACHE_DIR",
-    "LLVM_NATIVE_TOOL_DIR",
     "LLVM_PROJECT_COMMIT",
     "LLVM_DATETIME",
     "LLVM_PROJECT_MAIN_SRC_DIR",
@@ -45,6 +46,7 @@ environment-pass = [
     "CMAKE_GENERATOR",
     "CMAKE_ARGS",
     "APPLY_PATCHES",
+    "PIP_FIND_LINKS",
 ]
 manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
 repair-wheel-command = ""

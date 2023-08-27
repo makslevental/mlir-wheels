@@ -106,7 +106,6 @@ class CMakeBuild(build_ext):
             platform.system() == "Linux"
             and "AArch64" in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]
         ):
-            # native_tools_dir = os.getenv("LLVM_NATIVE_TOOL_DIR")
             # assumes mlir-native-tools has been installed
             native_tools_dir = Path(sys.prefix) / "bin"
             assert native_tools_dir is not None, "native_tools_dir missing"
