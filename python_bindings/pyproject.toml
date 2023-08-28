@@ -38,7 +38,8 @@ before-build = [
     "{project}/scripts/install_vulkan.sh",
 ]
 repair-wheel-command = [
-    'LD_LIBRARY_PATH=$(python setup.py install_correct_mlir)/lib auditwheel repair -L "./mlir/_mlir_libs" -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1'
+    'LD_LIBRARY_PATH=$(python setup.py install_correct_mlir)/lib auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1'
+#    'LD_LIBRARY_PATH=$(python setup.py install_correct_mlir)/lib auditwheel repair -L "./mlir/_mlir_libs" -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1'
 ]
 
 [tool.cibuildwheel.macos]
@@ -54,5 +55,5 @@ before-build = [
     "pip install delvewheel",
     "bash {project}\\scripts\\install_vulkan.sh",
 ]
-repair-wheel-command = '$env:FOO = python setup.py install_correct_mlir; delvewheel repair --add-path "$env:FOO\lib" -v -w {dest_dir} {wheel}'
+repair-wheel-command = 'delvewheel repair -v -w {dest_dir} {wheel}'
 #repair-wheel-command = "delvewheel repair --add-path $(python setup.py install_correct_mlir)/lib -v -w {dest_dir} {wheel}"
