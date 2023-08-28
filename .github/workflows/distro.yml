@@ -34,7 +34,7 @@ on:
         required: false
         default: 'true'
 
-#  pull_request:
+  pull_request:
   release:
     types:
       - published
@@ -271,7 +271,7 @@ jobs:
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
         
         if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ] && [ x"${{ matrix.arch }}" == x"aarch64" ]; then
-          rename 's/-linux_x86_64/-linux_aarch64/' wheelhouse/mlir-*whl
+          rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
         fi
 
     - name: rename

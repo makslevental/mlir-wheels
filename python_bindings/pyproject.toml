@@ -28,6 +28,7 @@ environment-pass = [
     "BUILD_VULKAN",
     "CMAKE_GENERATOR",
     "CMAKE_ARGS",
+    "HOST_CCACHE_DIR",
     "PIP_FIND_LINKS",
 ]
 before-all = [
@@ -39,7 +40,6 @@ before-build = [
 ]
 repair-wheel-command = [
     'LD_LIBRARY_PATH=$(python setup.py install_correct_mlir)/lib auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1'
-#    'LD_LIBRARY_PATH=$(python setup.py install_correct_mlir)/lib auditwheel repair -L "./mlir/_mlir_libs" -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1'
 ]
 
 [tool.cibuildwheel.macos]
@@ -47,7 +47,7 @@ before-build = [
     "{project}/scripts/install_vulkan.sh",
 ]
 repair-wheel-command = [
-    "DYLD_FALLBACK_LIBRARY_PATH=$(python setup.py install_correct_mlir)/lib delocate-wheel -L mlir/_mlir_libs --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+    "DYLD_FALLBACK_LIBRARY_PATH=$(python setup.py install_correct_mlir)/lib delocate-wheel -L mlir/_mlir_libs --require-archs {delocate_archs} -w {dest_dir} -v {wheel}  --ignore-missing-dependencies"
 ]
 
 [tool.cibuildwheel.windows]
@@ -55,5 +55,4 @@ before-build = [
     "pip install delvewheel",
     "bash {project}\\scripts\\install_vulkan.sh",
 ]
-repair-wheel-command = 'delvewheel repair -v -w {dest_dir} {wheel}'
-#repair-wheel-command = "delvewheel repair --add-path $(python setup.py install_correct_mlir)/lib -v -w {dest_dir} {wheel}"
+#repair-wheel-command = 'delvewheel repair -v -w {dest_dir} {wheel} --no-dll mlirpythoncapi.dll'

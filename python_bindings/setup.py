@@ -103,6 +103,15 @@ def install_correct_mlir():
     return Path(site.getsitepackages()[0]) / "mlir", str(c.version)
 
 
+try:
+    import mlir
+
+    version = version("mlir")
+    MLIR_INSTALL_ABS_PATH = Path(mlir.__path__[0])
+except:
+    MLIR_INSTALL_ABS_PATH, version = install_correct_mlir()
+
+
 class CMakeExtension(Extension):
     def __init__(self, name: str, sourcedir: str = "") -> None:
         super().__init__(name, sources=[])
@@ -273,14 +282,6 @@ class CMakeBuild(build_ext):
                 dst_path = mlir_libs_dir / os.path.basename(shlib_fp)
                 shutil.copyfile(shlib_fp, dst_path, follow_symlinks=True)
 
-
-try:
-    import mlir
-
-    version = version("mlir")
-    MLIR_INSTALL_ABS_PATH = Path(mlir.__path__[0])
-except:
-    MLIR_INSTALL_ABS_PATH, version = install_correct_mlir()
 
 if len(sys.argv) > 1 and sys.argv[1] == "install_correct_mlir":
     print(MLIR_INSTALL_ABS_PATH)

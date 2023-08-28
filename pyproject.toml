@@ -22,7 +22,7 @@ before-build = [
 skip = ["*-manylinux_i686", "*-musllinux*"]
 
 [tool.cibuildwheel.linux]
-#archs = ["x86_64", "aarch64"]
+environment = { PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH" }
 before-all = [
     "{project}/scripts/docker_prepare_ccache.sh",
 ]
@@ -48,19 +48,19 @@ environment-pass = [
     "APPLY_PATCHES",
     "PIP_FIND_LINKS",
 ]
-
-[tool.cibuildwheel.linux.environment]
-PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH"
+repair-wheel-command = [
+    "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1 --exclude libomp.so --exclude libompd.so"
+]
 
 [tool.cibuildwheel.macos]
+environment = { PATH = "/opt/homebrew/opt/ccache/libexec:$PATH" }
 before-build = [
     "{project}/scripts/install_vulkan.sh",
     "{project}/scripts/apply_patches.sh",
 ]
-before-test = "ccache --show-stats"
-
-[tool.cibuildwheel.macos.environment]
-PATH = "/opt/homebrew/opt/ccache/libexec:$PATH"
+repair-wheel-command = [
+    "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} --ignore-missing-dependencies"
+]
 
 [tool.cibuildwheel.windows]
 before-build = [
@@ -68,7 +68,7 @@ before-build = [
     "bash {project}\\scripts\\install_vulkan.sh",
     "bash {project}\\scripts\\apply_patches.sh",
 ]
-repair-wheel-command = 'delvewheel repair {dest_dir} {wheel}'
+#repair-wheel-command = 'delvewheel repair {dest_dir} {wheel}'
 
 #[tool.cibuildwheel.windows.environment]
 #PATH = "/usr/lib/ccache:$HOME/.cargo/bin:$PATH"
