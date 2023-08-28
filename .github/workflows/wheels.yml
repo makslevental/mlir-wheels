@@ -441,7 +441,11 @@ jobs:
         if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
         shell: bash
         run: |
+          cp -R scripts/python_bindings
+          
           pushd python_bindings
+          
+          pip install cibuildwheel
           
           CIBW_ARCHS=${{ matrix.arch }} \
           LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
@@ -459,7 +463,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
         with:
           arch: ${{ matrix.arch }}
-          distro: ubuntu-20.04
+          distro: ubuntu-18.04
           dockerRunArgs: |
             --volume "${PWD}:/workspace"
           install: |
@@ -467,6 +471,7 @@ jobs:
             apt-get install -q -y ninja-build build-essential cmake python3 python3-pip python-is-python3
           run: |
             cd /workspace/python_bindings
+            cp -R ../scripts .
             
             pip install cibuildwheel
             
@@ -484,7 +489,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           path: wheelhouse/*.whl
-          name: build_artifact
+          name: build_artifact_python_bindings
 
 
   upload_bindings_wheels:
@@ -501,7 +506,7 @@ jobs:
         with:
           # unpacks default artifact into dist/
           # if `name: artifact` is omitted, the action will create extra parent dir
-          name: build_artifact
+          name: build_artifact_python_bindings
           path: dist
 
       - name: Set up a release page
