@@ -3,18 +3,20 @@ set -xe
 
 if [[ x"$BUILD_VULKAN" == x"true" ]]; then
   if [ x"$MATRIX_OS" == x"macos-11" ]; then
-    wget -q https://sdk.lunarg.com/sdk/download/1.3.239.0/mac/vulkansdk-macos-1.3.239.0.dmg
-    sudo hdiutil attach vulkansdk-macos-1.3.239.0.dmg
-    sudo /Volumes/vulkansdk-macos-1.3.239.0/InstallVulkan.app/Contents/MacOS/InstallVulkan \
-      --accept-licenses \
-      --default-answer \
-      --confirm-command install \
-      com.lunarg.vulkan.core \
-      com.lunarg.vulkan.usr \
-      com.lunarg.vulkan.sdl2 \
-      com.lunarg.vulkan.glm \
-      com.lunarg.vulkan.volk \
-      com.lunarg.vulkan.vma
+    if [ ! -f vulkansdk-macos-1.3.239.0.dmg ]; then
+      wget -q https://sdk.lunarg.com/sdk/download/1.3.239.0/mac/vulkansdk-macos-1.3.239.0.dmg
+      sudo hdiutil attach vulkansdk-macos-1.3.239.0.dmg
+      sudo /Volumes/vulkansdk-macos-1.3.239.0/InstallVulkan.app/Contents/MacOS/InstallVulkan \
+        --accept-licenses \
+        --default-answer \
+        --confirm-command install \
+        com.lunarg.vulkan.core \
+        com.lunarg.vulkan.usr \
+        com.lunarg.vulkan.sdl2 \
+        com.lunarg.vulkan.glm \
+        com.lunarg.vulkan.volk \
+        com.lunarg.vulkan.vma
+    fi
   else
     rm -rf Vulkan-Headers
     rm -rf build-vulkan-headers

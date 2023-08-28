@@ -48,8 +48,6 @@ environment-pass = [
     "APPLY_PATCHES",
     "PIP_FIND_LINKS",
 ]
-manylinux-aarch64-image = "dockcross/manylinux2014-aarch64"
-repair-wheel-command = ""
 
 [tool.cibuildwheel.linux.environment]
 PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH"
@@ -60,19 +58,17 @@ before-build = [
     "{project}/scripts/apply_patches.sh",
 ]
 before-test = "ccache --show-stats"
-repair-wheel-command = ""
 
 [tool.cibuildwheel.macos.environment]
 PATH = "/opt/homebrew/opt/ccache/libexec:$PATH"
 
 [tool.cibuildwheel.windows]
-#before-build = "pip install delvewheel"
 before-build = [
+    "pip install delvewheel",
     "bash {project}\\scripts\\install_vulkan.sh",
     "bash {project}\\scripts\\apply_patches.sh",
 ]
-# repair-wheel-command = 'delvewheel repair --add-path "$(realpath $(dirname $(find . -name MLIR-C.lib | tail -n1)))" -L \python_packages\mlir_core\mlir\_mlir_libs -w {dest_dir} {wheel}'
-repair-wheel-command = ""
+repair-wheel-command = 'delvewheel repair {dest_dir} {wheel}'
 
 #[tool.cibuildwheel.windows.environment]
 #PATH = "/usr/lib/ccache:$HOME/.cargo/bin:$PATH"
