@@ -1,28 +1,21 @@
 diff --git a/mlir/lib/ExecutionEngine/CMakeLists.txt b/mlir/lib/ExecutionEngine/CMakeLists.txt
-index 39cc9c060db7..2bd0a6c55cdd 100644
+index ad752cfdcf8e..42393bcfddf1 100644
 --- a/mlir/lib/ExecutionEngine/CMakeLists.txt
 +++ b/mlir/lib/ExecutionEngine/CMakeLists.txt
-@@ -167,13 +167,13 @@ if(LLVM_ENABLE_PIC)
-     LINK_LIBS PUBLIC
-     ${LLVM_PTHREAD_LIB}
-   )
--  set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
-+#  set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
-   target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
-   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-     # Don't export symbols from link-time dependencies, these are internal
-     # implementation details.
-     # FIXME: Add a similar fix for Windows.
--    target_link_options(mlir_async_runtime PRIVATE "-Wl,-exclude-libs,ALL")
-+#    target_link_options(mlir_async_runtime PRIVATE "-Wl,-exclude-libs,ALL")
-   endif()
+@@ -162,7 +162,7 @@ add_mlir_library(mlir_async_runtime
+   LINK_LIBS PUBLIC
+   ${LLVM_PTHREAD_LIB}
+ )
+-set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
++#set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
+ target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
  
-   if(MLIR_ENABLE_CUDA_RUNNER)
+ if(MLIR_ENABLE_CUDA_RUNNER)
 diff --git a/openmp/CMakeLists.txt b/openmp/CMakeLists.txt
-index c1efcaf80b54..117d0b3cf991 100644
+index a87ea2fb57c5..c5e35fee21ad 100644
 --- a/openmp/CMakeLists.txt
 +++ b/openmp/CMakeLists.txt
-@@ -132,4 +132,4 @@ add_subdirectory(libompd)
+@@ -129,4 +129,4 @@ add_subdirectory(libompd)
  add_subdirectory(docs)
  
  # Now that we have seen all testsuites, create the check-openmp target.
