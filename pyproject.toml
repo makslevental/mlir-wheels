@@ -12,21 +12,14 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-environment = { PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
 build-verbosity = 3
 build = "cp311-*"
-before-build = [
-    "rm -rf {project}/build",
-    "rm -rf *egg*",
-]
 skip = ["*-manylinux_i686", "*-musllinux*"]
 
 [tool.cibuildwheel.linux]
-environment = { PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH" }
-before-all = [
-    "{project}/scripts/docker_prepare_ccache.sh",
-]
+environment = { PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH", PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
 before-build = [
+    "{project}/scripts/docker_prepare_ccache.sh",
     "{project}/scripts/install_cuda.sh",
     "{project}/scripts/install_vulkan.sh",
     "{project}/scripts/apply_patches.sh",
@@ -47,13 +40,14 @@ environment-pass = [
     "CMAKE_ARGS",
     "APPLY_PATCHES",
     "PIP_FIND_LINKS",
+    "PIP_NO_BUILD_ISOLATION",
 ]
 repair-wheel-command = [
     "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1 --exclude libomp.so --exclude libompd.so"
 ]
 
 [tool.cibuildwheel.macos]
-environment = { PATH = "/opt/homebrew/opt/ccache/libexec:$PATH" }
+environment = { PATH = "/opt/homebrew/opt/ccache/libexec:$PATH", PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
 before-build = [
     "{project}/scripts/install_vulkan.sh",
     "{project}/scripts/apply_patches.sh",
@@ -63,6 +57,7 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.windows]
+environment = { PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
 before-build = [
     "pip install delvewheel",
     "bash {project}\\scripts\\install_vulkan.sh",

@@ -2,18 +2,13 @@ name: Wheels
 
 on:
   workflow_dispatch:
+  workflow_call:
     inputs:
       mlir_commit:
         description: 'mlir commit'
         type: string
         required: false
         default: ''
-
-  pull_request:
-  workflow_run:
-    workflows: ["Distro"]
-    types:
-      - completed
 
 jobs:
 

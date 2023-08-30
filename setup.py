@@ -242,10 +242,10 @@ commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
 now = datetime.now()
 llvm_datetime = os.environ.get(
-    "LLVM_DATETIME", f"{now.year}.{now.month}.{now.day}.{now.hour}"
+    "LLVM_DATETIME", f"{now.year}.{now.month:02}.{now.day:02}.{now.hour:02}"
 ).replace(".", "")
 
-version = f"{llvm_version[0]}.{llvm_version[1]}.{llvm_version[2]}.{llvm_datetime}+{commit_hash}"
+version = f"{llvm_version[0]}.{llvm_version[1]}.{llvm_version[2]}.{llvm_datetime}+"
 
 local_version = []
 BUILD_CUDA = check_env("BUILD_CUDA")
@@ -258,7 +258,9 @@ BUILD_OPENMP = check_env("BUILD_OPENMP")
 if BUILD_OPENMP:
     local_version += ["openmp"]
 if local_version:
-    version += "." + ".".join(local_version)
+    version += ".".join(local_version + [commit_hash])
+else:
+    version += commit_hash
 
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(

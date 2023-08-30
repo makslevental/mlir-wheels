@@ -67,13 +67,6 @@ jobs:
           DATETIME=$(date +"%Y.%m.%d.%H")
           echo "LLVM_DATETIME=${DATETIME}" | tee -a $GITHUB_OUTPUT
 
-#  build_aarch64_wheels:
-#    needs: get_llvm_project_commit
-#    uses: makslevental/mlir-wheels/.github/workflows/build_arm64.yml@arm64_wheels
-#    with:
-#      llvm_commit: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-#      llvm_datetime: ${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}
-
   build:
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda && 'cuda' || '' }} ${{ matrix.build_vulkan && 'vulkan' || '' }} ${{ matrix.build_openmp && 'openmp' || '' }}
 
@@ -228,7 +221,6 @@ jobs:
       run: |
         pip install cibuildwheel
         
-        PIP_FIND_LINKS="https://makslevental.github.io/wheels" \
         BUILD_CUDA=${{ matrix.build_cuda }} \
         BUILD_OPENMP=${{ matrix.build_openmp }} \
         BUILD_VULKAN=${{ matrix.build_vulkan }} \
@@ -255,6 +247,7 @@ jobs:
         BUILD_CUDA=${{ matrix.build_cuda }} \
         BUILD_OPENMP=${{ matrix.build_openmp }} \
         BUILD_VULKAN=${{ matrix.build_vulkan }} \
+        MATRIX_OS=${{ matrix.os }} \
         CMAKE_GENERATOR=Ninja \
         pip wheel . -v -w wheelhouse
 
@@ -386,3 +379,13 @@ jobs:
           allowUpdates: true
           replacesArtifacts: true
           makeLatest: true
+
+  call-build-python-bindings:
+    needs: [upload_distro_wheels, get_llvm_project_commit]
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@pip_install_mlir
+    permissions:
+      contents: write
+      id-token: write
+    secrets: inherit # pass all secrets
+    with:
+      mlir_commit: "18.0.0.${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}+${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"

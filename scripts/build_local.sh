@@ -15,6 +15,9 @@ echo "${machine}"
 
 export BUILD_OPENMP=false
 export BUILD_VULKAN=false
+export BUILD_CUDA=false
+export APPLY_PATCHES=true
+export MLIR_COMMIT=18.0.0.2023082921+a43bf8a8
 
 if [ "$machine" == "linux" ]; then
   export LLVM_PROJECT_MAIN_SRC_DIR=/project/llvm-project
@@ -22,24 +25,19 @@ if [ "$machine" == "linux" ]; then
   export CIBW_ARCHS=x86_64
   export ARCH=x86_64
   export PARALLEL_LEVEL=15
-  export BUILD_CUDA=false
-  export APPLY_PATCHES=false
 elif [ "$machine" == "macos" ]; then
   export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=macos-11
   export CIBW_ARCHS=arm64
   export ARCH=arm64
   export PARALLEL_LEVEL=32
-  export BUILD_CUDA=false
 else
   export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=windows-2019
   export CIBW_ARCHS=AMD64
   export ARCH=AMD64
-  export BUILD_CUDA=false
 fi
 
-#export PIP_NO_BUILD_ISOLATION=false
 ccache --show-stats
 ccache --print-stats
 ccache --show-config
@@ -82,8 +80,5 @@ unzip $HERE/../wheelhouse/mlir-*whl -x "mlir/bin/*" -d $HERE/../python_bindings
 cp -R "$HERE/../scripts" "$HERE/../python_bindings"
 
 pushd "$HERE/../python_bindings"
-sed -i.bak 's/FATAL_ERROR/WARNING/g' mlir/lib/cmake/mlir/MLIRTargets.cmake
-sed -i.bak 's/FATAL_ERROR/WARNING/g' mlir/lib/cmake/llvm/LLVMExports.cmake
 
-find mlir -exec touch {} \;
 cibuildwheel --platform "$machine" --output-dir ../wheelhouse

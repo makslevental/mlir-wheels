@@ -3,7 +3,6 @@ import os
 import platform
 import re
 import shutil
-import site
 import subprocess
 import sys
 from datetime import datetime
@@ -11,105 +10,12 @@ from importlib.metadata import version
 from pathlib import Path
 from pprint import pprint
 
-from pip._internal.index.collector import LinkCollector
-from pip._internal.index.package_finder import PackageFinder
-from pip._internal.models.search_scope import SearchScope
-from pip._internal.models.target_python import TargetPython
-from pip._internal.network.session import PipSession
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
 
 def check_env(build):
     return os.environ.get(build, 0) in {"1", "true", "True", "ON", "YES"}
-
-
-local_version = set()
-BUILD_CUDA = check_env("BUILD_CUDA")
-if BUILD_CUDA:
-    local_version.add("cuda")
-BUILD_VULKAN = check_env("BUILD_VULKAN")
-if BUILD_VULKAN:
-    local_version.add("vulkan")
-BUILD_OPENMP = check_env("BUILD_OPENMP")
-if BUILD_OPENMP:
-    local_version.add("openmp")
-
-CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
-MLIR_COMMIT = os.environ.get("MLIR_COMMIT", "")
-if MLIR_COMMIT == "":
-    MLIR_COMMIT = None
-
-
-def install_correct_mlir():
-    global MLIR_COMMIT
-    s = PipSession()
-    ss = SearchScope(
-        find_links=[
-            "https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest"
-        ],
-        index_urls=[],
-        no_index=True,
-    )
-    l = LinkCollector(s, ss)
-
-    arch = CIBW_ARCHS.lower()
-    if platform.system() == "Darwin":
-        t = TargetPython(platforms=[f"macosx_11_0_{arch}"])
-    elif platform.system() == "Linux":
-        t = TargetPython(
-            platforms=[
-                f"linux_{arch}",
-                f"manylinux_2_17_{arch}",
-                f"manylinux2014_{arch}",
-            ]
-        )
-    elif platform.system() == "Windows":
-        t = TargetPython(platforms=[f"win_{arch}"])
-    else:
-        raise NotImplementedError
-
-    p = PackageFinder(l, t, False)
-
-    for c in reversed(p.find_all_candidates("mlir")):
-        hash, *extras = c.version.local.split(".")
-        if MLIR_COMMIT is None:
-            MLIR_COMMIT = hash
-        if set(extras) == local_version and MLIR_COMMIT == hash:
-            # mlir-18.0.0.2023082811+667a9f7a.vulkan-py3-none-macosx_11_0_arm64.whl
-            plat = c.link.filename.rsplit("-", 1)[1].split(".")[0]
-            subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--only-binary=:all:",
-                    "--platform",
-                    plat,
-                    "--target",
-                    site.getsitepackages()[0],
-                    "--force",
-                    "-U",
-                    "-vvv",
-                    str(c.link.url),
-                ],
-                check=True,
-            )
-            break
-
-    print(Path(site.getsitepackages()[0]), file=sys.stderr)
-    subprocess.run(["ls", "-lh", str(Path(site.getsitepackages()[0]) / "mlir")])
-    return Path(site.getsitepackages()[0]) / "mlir", str(c.version)
-
-
-try:
-    import mlir
-
-    version = version("mlir")
-    MLIR_INSTALL_ABS_PATH = Path(mlir.__path__[0])
-except:
-    MLIR_INSTALL_ABS_PATH, version = install_correct_mlir()
 
 
 class CMakeExtension(Extension):
@@ -129,6 +35,7 @@ def get_exe_suffix():
 def get_cross_cmake_args():
     cmake_args = {}
 
+    CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
     if CIBW_ARCHS in {"arm64", "aarch64", "ARM64"}:
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "AArch64"
     elif CIBW_ARCHS in {"x86_64", "AMD64"}:
@@ -156,6 +63,13 @@ class CMakeBuild(build_ext):
         cfg = "Release"
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
+        import mlir
+
+        MLIR_INSTALL_ABS_PATH = Path(mlir.__path__[0])
+        if platform.system() == "Windows":
+            # fatal error LNK1170: line in command file contains 131071 or more characters
+            shutil.move(MLIR_INSTALL_ABS_PATH, "/tmp/m")
+            MLIR_INSTALL_ABS_PATH = Path("/tmp/m").absolute()
 
         cmake_args = [
             f"-G {cmake_generator}",
@@ -277,19 +191,21 @@ class CMakeBuild(build_ext):
             shlib_fps = glob.glob(
                 str(MLIR_INSTALL_ABS_PATH.absolute() / "lib" / ("*" + shlib_name + "*"))
             )
-            assert len(shlib_fps), "couldn't find shlibs"
+            assert len(shlib_fps), f"couldn't find shlib {shlib_name}"
             for shlib_fp in shlib_fps:
                 dst_path = mlir_libs_dir / os.path.basename(shlib_fp)
                 shutil.copyfile(shlib_fp, dst_path, follow_symlinks=True)
 
 
-if len(sys.argv) > 1 and sys.argv[1] == "install_correct_mlir":
-    print(MLIR_INSTALL_ABS_PATH)
-    exit()
+BUILD_CUDA = check_env("BUILD_CUDA")
+BUILD_VULKAN = check_env("BUILD_VULKAN")
+BUILD_OPENMP = check_env("BUILD_OPENMP")
+
+version = version("mlir")
 
 _datetime, commit_hash = version.split("+")
 now = datetime.now()
-commit_hash = commit_hash.split(".", 1)[0]
+commit_hash = commit_hash.rsplit(".", 1)[-1]
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(
     version=version,
