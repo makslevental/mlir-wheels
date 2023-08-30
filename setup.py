@@ -21,6 +21,15 @@ class CMakeExtension(Extension):
 def get_cross_cmake_args():
     cmake_args = {}
 
+    def native_tools():
+        nonlocal cmake_args
+
+        native_tools_dir = Path(sys.prefix).absolute() / "bin"
+        assert native_tools_dir is not None, "native_tools_dir missing"
+        assert os.path.exists(native_tools_dir), "native_tools_dir doesn't exist"
+        cmake_args["LLVM_USE_HOST_TOOLS"] = "ON"
+        cmake_args["LLVM_NATIVE_TOOL_DIR"] = str(native_tools_dir)
+
     CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
     if CIBW_ARCHS in {"arm64", "aarch64", "ARM64"}:
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "AArch64"
@@ -29,7 +38,6 @@ def get_cross_cmake_args():
     else:
         raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
     if CIBW_ARCHS != platform.machine():
-        # cmake_args["LLVM_USE_HOST_TOOLS"] = "ON"
         cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
 
     if platform.system() == "Darwin":
@@ -45,12 +53,18 @@ def get_cross_cmake_args():
         if ARCH == "AArch64":
             cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "aarch64-linux-gnu"
             cmake_args["LLVM_HOST_TRIPLE"] = "aarch64-linux-gnu"
+            cmake_args["CMAKE_C_COMPILER"] = "aarch64-linux-gnu-gcc"
+            cmake_args["CMAKE_CXX_COMPILER"] = "aarch64-linux-gnu-g++"
+            cmake_args["CMAKE_CXX_FLAGS"] = "-static-libgcc -static-libstdc++"
+            native_tools()
         elif ARCH == "X86":
             cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "x86_64-unknown-linux-gnu"
             cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-unknown-linux-gnu"
 
     if BUILD_CUDA:
         cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
+
+    cmake_args["LLVM_TARGET_ARCH"] = ARCH
 
     return cmake_args
 
@@ -117,10 +131,6 @@ class CMakeBuild(build_ext):
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
-        if os.getenv("LLVM_NATIVE_TOOL_DIR"):
-            cmake_args += [
-                f"-DLLVM_NATIVE_TOOL_DIR={os.getenv('LLVM_NATIVE_TOOL_DIR')}"
-            ]
 
         LLVM_ENABLE_PROJECTS = "llvm;mlir"
 
@@ -152,15 +162,6 @@ class CMakeBuild(build_ext):
             LLVM_ENABLE_PROJECTS += ";openmp"
 
         cmake_args += [f"-DLLVM_ENABLE_PROJECTS={LLVM_ENABLE_PROJECTS}"]
-
-        if (
-            platform.system() == "Linux"
-            and "AArch64" in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]
-        ):
-            native_tools_dir = os.getenv("LLVM_NATIVE_TOOL_DIR")
-            assert native_tools_dir is not None, "native_tools_dir missing"
-            assert os.path.exists(native_tools_dir), "native_tools_dir doesn't exist"
-            cmake_args += [f"-DLLVM_NATIVE_TOOL_DIR={native_tools_dir}"]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
@@ -263,8 +264,8 @@ llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 setup(
     name="mlir",
     version=version,
-    author="maksim.levental@gmail.com",
-    author_email="",
+    author="Maksim Levental",
+    author_email="maksim.levental@gmail.com",
     description=f"MLIR distribution as wheel. Created at {now} build of {llvm_url}",
     long_description=f"MLIR distribution as wheel. Created at {now} build of [llvm/llvm-project/{commit_hash}]({llvm_url})",
     long_description_content_type="text/markdown",

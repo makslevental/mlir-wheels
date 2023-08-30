@@ -47,5 +47,3 @@ ccache -M 5 G # set cache size to 5 G
 # Show ccache stats
 echo "Cache stats:"
 ccache --show-stats
-ccache --print-stats
-ccache --show-config
