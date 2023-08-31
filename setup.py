@@ -242,8 +242,8 @@ commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
 
 now = datetime.now()
 llvm_datetime = os.environ.get(
-    "LLVM_DATETIME", f"{now.year}.{now.month:02}.{now.day:02}.{now.hour:02}"
-).replace(".", "")
+    "DATETIME", f"{now.year}{now.month:02}{now.day:02}{now.hour:02}"
+)
 
 version = f"{llvm_version[0]}.{llvm_version[1]}.{llvm_version[2]}.{llvm_datetime}+"
 

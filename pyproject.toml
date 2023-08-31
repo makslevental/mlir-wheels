@@ -17,7 +17,7 @@ build = "cp311-*"
 skip = ["*-manylinux_i686", "*-musllinux*"]
 
 [tool.cibuildwheel.linux]
-environment = { PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH", PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
+environment = { PATH = "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin:$PATH", PIP_FIND_LINKS = "https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" }
 before-build = [
     "{project}/scripts/docker_prepare_ccache.sh",
     "{project}/scripts/install_cuda.sh",
@@ -26,19 +26,18 @@ before-build = [
 ]
 before-test = "ccache --show-stats"
 environment-pass = [
+    "APPLY_PATCHES",
     "BUILD_CUDA",
     "BUILD_OPENMP",
     "BUILD_VULKAN",
     "CIBW_ARCHS",
+    "CMAKE_ARGS",
+    "CMAKE_GENERATOR",
+    "DATETIME",
     "HOST_CCACHE_DIR",
     "LLVM_PROJECT_COMMIT",
-    "LLVM_DATETIME",
-    "LLVM_PROJECT_MAIN_SRC_DIR",
     "MATRIX_OS",
     "PARALLEL_LEVEL",
-    "CMAKE_GENERATOR",
-    "CMAKE_ARGS",
-    "APPLY_PATCHES",
     "PIP_FIND_LINKS",
     "PIP_NO_BUILD_ISOLATION",
 ]
@@ -47,7 +46,7 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.macos]
-environment = { PATH = "/opt/homebrew/opt/ccache/libexec:$PATH", PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
+environment = { PATH = "/usr/local/opt/ccache/libexec:$PATH", PIP_FIND_LINKS = "https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" }
 before-build = [
     "{project}/scripts/install_vulkan.sh",
     "{project}/scripts/apply_patches.sh",
@@ -57,16 +56,9 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.windows]
-environment = { PIP_FIND_LINKS = "https://makslevental.github.io/wheels" }
+environment = { PIP_FIND_LINKS = "https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" }
 before-build = [
     "pip install delvewheel",
     "bash {project}\\scripts\\install_vulkan.sh",
     "bash {project}\\scripts\\apply_patches.sh",
 ]
-#repair-wheel-command = 'delvewheel repair {dest_dir} {wheel}'
-
-#[tool.cibuildwheel.windows.environment]
-#PATH = "/usr/lib/ccache:$HOME/.cargo/bin:$PATH"
-#archs = ["AMD64", "ARM64"]
-#before-all = "choco install ccache"
-#before-test = "ccache --show-stats"

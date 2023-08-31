@@ -20,19 +20,16 @@ export APPLY_PATCHES=true
 export MLIR_COMMIT=18.0.0.2023082921+a43bf8a8
 
 if [ "$machine" == "linux" ]; then
-  export LLVM_PROJECT_MAIN_SRC_DIR=/project/llvm-project
   export MATRIX_OS=ubuntu-20.04
   export CIBW_ARCHS=x86_64
   export ARCH=x86_64
   export PARALLEL_LEVEL=15
 elif [ "$machine" == "macos" ]; then
-  export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=macos-11
   export CIBW_ARCHS=arm64
   export ARCH=arm64
   export PARALLEL_LEVEL=32
 else
-  export LLVM_PROJECT_MAIN_SRC_DIR=$HERE/../llvm-project
   export MATRIX_OS=windows-2019
   export CIBW_ARCHS=AMD64
   export ARCH=AMD64

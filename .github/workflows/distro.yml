@@ -50,13 +50,16 @@ jobs:
     name: Get latest LLVM commit
 
     runs-on: ubuntu-latest
+
     outputs:
       LLVM_PROJECT_COMMIT: ${{ steps.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-      LLVM_DATETIME: ${{ steps.get_llvm_project_commit.outputs.LLVM_DATETIME }}
+      DATETIME: ${{ steps.get_llvm_project_commit.outputs.DATETIME }}
+
     steps:
       - name: Get llvm-project commit
         id: get_llvm_project_commit
         run: |
+          
           if [ x"${{ inputs.llvm_commit }}" == x"" ]; then
             sudo apt install jq
             LLVM_PROJECT_COMMIT=$(curl -s https://api.github.com/repos/llvm/llvm-project/commits/main | jq -r '.sha[:8]')
@@ -64,16 +67,19 @@ jobs:
             LLVM_PROJECT_COMMIT="${{ inputs.llvm_commit }}"
           fi
           echo "LLVM_PROJECT_COMMIT=${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
-          DATETIME=$(date +"%Y.%m.%d.%H")
-          echo "LLVM_DATETIME=${DATETIME}" | tee -a $GITHUB_OUTPUT
+          DATETIME=$(date +"%Y%m%d%H")
+          echo "DATETIME=${DATETIME}" | tee -a $GITHUB_OUTPUT
 
   build:
+
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda && 'cuda' || '' }} ${{ matrix.build_vulkan && 'vulkan' || '' }} ${{ matrix.build_openmp && 'openmp' || '' }}
 
     needs: get_llvm_project_commit
+
     continue-on-error: true
 
     runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -114,34 +120,15 @@ jobs:
             build_openmp: true
 
     steps:
-    # Enable tmate debugging of manually-triggered workflows if the input option was provided
+
+    # standard tools/deps
+
     - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && inputs.debug_os == matrix.os && inputs.debug_arch == matrix.arch }}
+      uses: mxschmitt/action-tmate@v3
       with:
         limit-access-to-actor: true
         detached: ${{ inputs.debug_detached }}
-
-    - name: Set workspace root
-      id: workspace_root
-      shell: bash
-      env:
-        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-      run: |
-        if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
-          WORKSPACE_ROOT="/C/a"
-        else
-          WORKSPACE_ROOT=${GITHUB_WORKSPACE}
-        fi
-        
-        mkdir -p $WORKSPACE_ROOT
-        git clone -b $BRANCH_NAME https://github.com/${{ github.repository }}.git $WORKSPACE_ROOT
-        
-        if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
-          WORKSPACE_ROOT="C:\a"
-        fi
-        echo "WORKSPACE_ROOT=$WORKSPACE_ROOT" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
-
 
     - uses: ilammy/msvc-dev-cmd@v1.4.1
       if: ${{ matrix.os == 'windows-2019' }}
@@ -171,113 +158,145 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Get LLVM
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17
+
+    - name: Install cross-compilation toolchain
+      shell: bash
+      if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
+      run: |
+        
+        sudo apt-get update
+        sudo apt-get install -y binutils-aarch64-linux-gnu \
+          g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
+
+    - name: pip install standard tools
+      run: pip install cibuildwheel wheel
+
+    - name: install rename
+      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
       shell: bash
       run: |
-        curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
-        unzip -q llvm.zip
-        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
-        mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
-        echo "LLVM_PROJECT_COMMIT=$LLVM_PROJECT_COMMIT" | tee -a $GITHUB_ENV
-        echo "LLVM_PROJECT_MAIN_SRC_DIR=$PWD/llvm-project" | tee -a $GITHUB_ENV
-        echo "LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}" | tee -a $GITHUB_ENV
+        
+        if [ x"${{ matrix.os }}" == x"macos-11" ]; then
+          brew install rename
+        else
+          sudo apt-get install -y rename
+        fi
 
+    - name: Set workspace root
+      id: workspace_root
+      shell: bash
+      run: |
+        
+        if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
+          WORKSPACE_ROOT="C:\a"
+        else
+          WORKSPACE_ROOT=${GITHUB_WORKSPACE}
+        fi
+        
+        echo "WORKSPACE_ROOT=$WORKSPACE_ROOT" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+
+    # checkout this repo
+
+    - name: Checkout to workspace
+      run: |
+        git clone -b ${{ github.head_ref || github.ref_name }} https://github.com/${{ github.repository }}.git ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+        ls ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+
+    # ccache config stuff
+
+    # must come after cloning repo because otherwise git will complain dir not empty
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.9
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
         max-size: "5G"
 
-    - name: Configure ccache dir on host
+    - name: Configure ccache dir on host ubuntu
+      if: ${{ matrix.os == 'ubuntu-20.04' }}
+      shell: bash
       working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       id: configure_ccache_dir_on_host
-      if: ${{ matrix.os == 'ubuntu-20.04' }}
       run: |
+        
         HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         mkdir -p $HOST_CCACHE_DIR
         echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_ENV
         echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
 
-    - name: Configure ccache on Mac
-      if: ${{ matrix.os == 'macos-11' }}
+    - name: Configure ccache
+      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
+      shell: bash
       run: |
-        export PATH="/opt/homebrew/opt/ccache/libexec:$PATH"
+        
+        if [ x"${{ matrix.os }}" == x"macos-11" ]; then
+          echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
+        else
+          echo "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin" >> $GITHUB_PATH
+        fi
 
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17
+    # setup llvm
 
-    - name: Install cross-compilation toolchain
-      if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
+    - name: Get LLVM
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install -y binutils-aarch64-linux-gnu \
-          g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
+        
+        curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
+        unzip -q llvm.zip
+        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
+        echo "LLVM_PROJECT_COMMIT=$LLVM_PROJECT_COMMIT" | tee -a $GITHUB_ENV
+        echo "DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }}" | tee -a $GITHUB_ENV
+
+    # build
 
     - name: cibuildwheel
+      if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
       shell: bash
       working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
       run: |
-        pip install cibuildwheel
         
+        APPLY_PATCHES=${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }} \
         BUILD_CUDA=${{ matrix.build_cuda }} \
         BUILD_OPENMP=${{ matrix.build_openmp }} \
         BUILD_VULKAN=${{ matrix.build_vulkan }} \
         CIBW_ARCHS=${{ matrix.arch }} \
+        CMAKE_GENERATOR=Ninja \
+        DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
         HOST_CCACHE_DIR=${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }} \
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
-        LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
-        LLVM_PROJECT_MAIN_SRC_DIR=${{ matrix.os == 'ubuntu-20.04' && '/project/llvm-project' || 'llvm-project' }} \
         MATRIX_OS=${{ matrix.os }} \
-        CMAKE_GENERATOR="Ninja" \
-        PARALLEL_LEVEL=${{ matrix.os == 'windows-2019' && '2' || '2' }} \
-        APPLY_PATCHES=${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }} \
+        PARALLEL_LEVEL=2 \
         cibuildwheel --output-dir wheelhouse
 
     - name: build aarch ubuntu wheel
+      if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
       working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
-      if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
       run: |
-        PIP_FIND_LINKS="https://makslevental.github.io/wheels" \
-        CIBW_ARCHS=${{ matrix.arch }} \
-        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
-        LLVM_DATETIME=${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }} \
+        
+        export APPLY_PATCHES=${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }}
+        ./scripts/apply_patches.sh
+        
         BUILD_CUDA=${{ matrix.build_cuda }} \
         BUILD_OPENMP=${{ matrix.build_openmp }} \
         BUILD_VULKAN=${{ matrix.build_vulkan }} \
-        MATRIX_OS=${{ matrix.os }} \
+        CIBW_ARCHS=${{ matrix.arch }} \
         CMAKE_GENERATOR=Ninja \
+        DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
+        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
+        MATRIX_OS=${{ matrix.os }} \
+        PIP_FIND_LINKS="https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" \
         pip wheel . -v -w wheelhouse
 
-    - name: rename
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      shell: bash
-      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
-      run: |
-        if [ x"${{ matrix.os }}" == x"macos-11" ]; then
-          brew install rename
-        else
-          sudo apt-get install -y rename
-        fi
-        rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
-        
-        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ] && [ x"${{ matrix.arch }}" == x"aarch64" ]; then
-          rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
-        fi
-
-    - name: rename
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      if: ${{ matrix.os == 'windows-2019' }}
-      run: |
-        ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
-
-    - name: Download cache from container
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      shell: bash
+    - name: Download cache from container ubuntu
       if: (matrix.os == 'ubuntu-20.04' && matrix.arch == 'x86_64') && (success() || failure())
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      shell: bash
       run: |
+        
         ccache -s
         HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         rm -rf $HOST_CCACHE_DIR
@@ -285,12 +304,30 @@ jobs:
         ls -la $HOST_CCACHE_DIR
         ccache -s
 
-    - name: Build native_tools wheel
+    - name: rename non-windows
+      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
       working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
       shell: bash
+      run: |
+        
+        rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
+        
+        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ] && [ x"${{ matrix.arch }}" == x"aarch64" ]; then
+          rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
+        fi
+
+    - name: rename windows
+      if: ${{ matrix.os == 'windows-2019' }}
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      run: ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
+
+    - name: Build native_tools wheel
       if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
+      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      shell: bash
       id: build_native_tools_wheel
       run: |
+        
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
           if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
             TOOL="$TOOL.exe"
@@ -306,11 +343,12 @@ jobs:
           PLAT="win"
         fi
         
-        pip install wheel
         PLAT=${PLAT}_$(echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
         pushd native_tools
         python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
         popd
+
+    # done
 
     - name: Upload wheels
       if: success() || failure()
@@ -319,24 +357,16 @@ jobs:
         path: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
         name: build_artifact
 
-    - name: Free some space
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      shell: bash
-      run: |
-        rm -rf wheelhouse/*.whl
-        rm -rf llvm-project
-        rm -rf llvm.zip
-        rm -rf build
-
   upload_distro_wheels:
+
     needs: [build, get_llvm_project_commit]
 
     runs-on: ubuntu-latest
-#    environment: pypi
-#    if: github.event_name == 'release' && github.event.action == 'published'
+
     permissions:
       id-token: write
       contents: write
+
     steps:
       - uses: actions/download-artifact@v3
         with:
@@ -345,19 +375,10 @@ jobs:
           name: build_artifact
           path: dist
 
-      - name: Set up a release page
-        id: setup_release
-        run: |
-          LLVM_PROJECT_COMMIT="${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"
-          echo "MLIR Distribution created at $(date), build of [https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT}](https://github.com/llvm/llvm-project/commit/${LLVM_PROJECT_COMMIT})" > body.md
-          echo "tag_name=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
-          echo "release_title=mlir-${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
-
       - name: Release current commit
         uses: ncipollo/release-action@v1.12.0
         with:
           artifacts: "dist/*.whl,dist/*.tar.xz"
-          bodyFile: body.md
           token: "${{ secrets.GITHUB_TOKEN }}"
           tag: "latest"
           name: "latest"
@@ -381,11 +402,14 @@ jobs:
           makeLatest: true
 
   call-build-python-bindings:
+
     needs: [upload_distro_wheels, get_llvm_project_commit]
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@pip_install_mlir
+
     permissions:
       contents: write
       id-token: write
+
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@pip_install_mlir
     secrets: inherit # pass all secrets
     with:
-      mlir_commit: "18.0.0.${{ needs.get_llvm_project_commit.outputs.LLVM_DATETIME }}+${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"
+      mlir_commit: "18.0.0.${{ needs.get_llvm_project_commit.outputs.DATETIME }}+${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"

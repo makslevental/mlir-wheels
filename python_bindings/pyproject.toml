@@ -17,7 +17,7 @@ environment-pass = [
     "CMAKE_ARGS",
     "CMAKE_GENERATOR",
     "HOST_CCACHE_DIR",
-    "LLVM_DATETIME",
+    "DATETIME",
     "LLVM_PROJECT_COMMIT",
     "MATRIX_OS",
     "MLIR_COMMIT",
