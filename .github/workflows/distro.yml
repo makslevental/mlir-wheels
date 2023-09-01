@@ -253,7 +253,10 @@ jobs:
         
         PLAT=${PLAT}_$(echo ${{ matrix.ARCH }} | tr '[:upper:]' '[:lower:]')
         pushd native_tools
+        
+        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
         python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
+        
         popd
 
     # done
