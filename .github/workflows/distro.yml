@@ -144,7 +144,6 @@ jobs:
       with:
         MATRIX_OS: ${{ matrix.OS }}
         MATRIX_ARCH: ${{ matrix.ARCH }}
-        WORKSPACE_ROOT: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
 
     # setup llvm
 
@@ -230,7 +229,6 @@ jobs:
       run: ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
 
     - name: Build native_tools wheel
-      if: ${{ matrix.OS != 'ubuntu-20.04' || matrix.ARCH != 'aarch64' }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       id: build_native_tools_wheel
@@ -244,7 +242,7 @@ jobs:
         done
         
         if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ]; then
-          PLAT="manylinux_2_17"
+          PLAT="linux"
         elif [ x"${{ matrix.OS }}" == x"macos-11" ]; then
           PLAT="macosx_11_0"
         elif [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
