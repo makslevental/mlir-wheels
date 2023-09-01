@@ -17,7 +17,7 @@ export BUILD_OPENMP=false
 export BUILD_VULKAN=false
 export BUILD_CUDA=false
 export APPLY_PATCHES=true
-export MLIR_COMMIT=18.0.0.2023082921+a43bf8a8
+export MLIR_WHEEL_VERSION=18.0.0.2023082921+a43bf8a8
 
 if [ "$machine" == "linux" ]; then
   export MATRIX_OS=ubuntu-20.04

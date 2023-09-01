@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
-      MLIR_COMMIT:
+      MLIR_WHEEL_VERSION:
         description: 'mlir commit'
         type: string
         required: false
@@ -93,7 +93,7 @@ jobs:
           CMAKE_GENERATOR=Ninja \
           HOST_CCACHE_DIR=${{ steps.setup_ccache.outputs.HOST_CCACHE_DIR }} \
           MATRIX_OS=${{ matrix.OS }} \
-          MLIR_COMMIT=${{ inputs.MLIR_COMMIT }} \
+          MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
           cibuildwheel --output-dir ../wheelhouse
           
           popd
@@ -132,7 +132,7 @@ jobs:
             CMAKE_GENERATOR=Ninja \
             HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
             MATRIX_OS=${{ matrix.OS }} \
-            MLIR_COMMIT=${{ inputs.MLIR_COMMIT }} \
+            MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
             cibuildwheel --output-dir ../wheelhouse
             
             popd
@@ -172,7 +172,7 @@ jobs:
             CMAKE_GENERATOR=Ninja \
             HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
             MATRIX_OS=${{ matrix.OS }} \
-            MLIR_COMMIT=${{ inputs.MLIR_COMMIT }} \
+            MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
             cibuildwheel --output-dir ../wheelhouse
             
             popd
