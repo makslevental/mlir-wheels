@@ -3,32 +3,32 @@ name: Distro
 on:
   workflow_dispatch:
     inputs:
-      debug_enabled:
+      DEBUG_ENABLED:
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
         type: boolean
         required: false
         default: false
-      debug_os:
+      DEBUG_OS:
         description: 'which runner os to run the tmate action in (if the tmate action is run)'
         type: string
         default: 'windows-2019'
         required: false
-      debug_arch:
+      DEBUG_ARCH:
         description: 'which runner arch to run the tmate action in (if the tmate action is run)'
         type: string
         default: 'x86_64'
         required: false
-      debug_detached:
+      DEBUG_DETACHED:
         description: 'whether to launch tmate in detached mode (if the tmate action is run)'
         type: boolean
         required: false
         default: true
-      llvm_commit:
+      LLVM_COMMIT:
         description: 'llvm commit to build'
         type: string
         required: false
         default: ''
-      apply_patches:
+      APPLY_PATCHES:
         description: 'whether to apply patches to source'
         type: string
         required: false
@@ -72,174 +72,83 @@ jobs:
 
   build:
 
-    name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.build_cuda && 'cuda' || '' }} ${{ matrix.build_vulkan && 'vulkan' || '' }} ${{ matrix.build_openmp && 'openmp' || '' }}
-
     needs: get_llvm_project_commit
+
+    name: ${{ matrix.OS }} ${{ matrix.ARCH }} ${{ matrix.BUILD_CUDA && 'cuda' || '' }} ${{ matrix.BUILD_VULKAN && 'vulkan' || '' }} ${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
     continue-on-error: true
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.OS }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-            arch: x86_64
+          - OS: ubuntu-20.04
+            ARCH: x86_64
 
-          - os: ubuntu-20.04
-            arch: aarch64
+          - OS: ubuntu-20.04
+            ARCH: aarch64
 
-          - os: ubuntu-20.04
-            arch: x86_64
-            build_cuda: true
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_CUDA: true
 
-          - os: ubuntu-20.04
-            arch: x86_64
-            build_vulkan: true
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_VULKAN: true
 
-          - os: ubuntu-20.04
-            arch: x86_64
-            build_openmp: true
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_OPENMP: true
 
-          - os: windows-2019
-            arch: AMD64
+          - OS: windows-2019
+            ARCH: AMD64
 
-          - os: macos-11
-            arch: x86_64
+          - OS: macos-11
+            ARCH: x86_64
 
-          - os: macos-11
-            arch: arm64
+          - OS: macos-11
+            ARCH: arm64
 
-          - os: macos-11
-            arch: arm64
-            build_vulkan: true
+          - OS: macos-11
+            ARCH: arm64
+            BUILD_VULKAN: true
 
-          - os: macos-11
-            arch: arm64
-            build_openmp: true
+          - OS: macos-11
+            ARCH: arm64
+            BUILD_OPENMP: true
 
     steps:
 
-    # standard tools/deps
-
-    - name: Setup tmate session
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled && inputs.debug_os == matrix.os && inputs.debug_arch == matrix.arch }}
-      uses: mxschmitt/action-tmate@v3
+    - name: Checkout actions
+      uses: actions/checkout@v3
       with:
-        limit-access-to-actor: true
-        detached: ${{ inputs.debug_detached }}
+        sparse-checkout: |
+          .github/actions
 
-    - uses: ilammy/msvc-dev-cmd@v1.4.1
-      if: ${{ matrix.os == 'windows-2019' }}
-
-    - name: Set up Visual Studio shell
-      if: ${{ matrix.os == 'windows-2019' }}
-      uses: egor-tensin/vs-shell@v2
+    - uses: ./.github/actions/setup_base
+      id: setup_base
       with:
-        arch: x64
+        # optional
+        DEBUG_ENABLED: ${{ inputs.DEBUG_ENABLED }}
+        DEBUG_OS: ${{ inputs.DEBUG_OS }}
+        DEBUG_ARCH: ${{ inputs.DEBUG_ARCH }}
+        DEBUG_DETACHED: ${{ inputs.DEBUG_DETACHED }}
+        # required
+        MATRIX_OS: ${{ matrix.OS }}
+        MATRIX_ARCH: ${{ matrix.ARCH }}
 
-    - name: MS Build
-      if: ${{ matrix.os == 'windows-2019' }}
-      uses: microsoft/setup-msbuild@v1.1
-
-    - name: Free disk space
-      if: contains(matrix.os, 'ubuntu')
-      uses: jlumbroso/free-disk-space@76866dbe54312617f00798d1762df7f43def6e5c # v1.2.0
+    - uses: ./.github/actions/setup_ccache
+      id: setup_ccache
       with:
-        android: true
-        dotnet: true
-        haskell: true
-        large-packages: true
-        swap-storage: false # This frees space on the wrong partition.
-        tool-cache: false # This includes Python, which we need.
-
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17
-
-    - name: Install cross-compilation toolchain
-      shell: bash
-      if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
-      run: |
-        
-        sudo apt-get update
-        sudo apt-get install -y binutils-aarch64-linux-gnu \
-          g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
-
-    - name: pip install standard tools
-      run: pip install cibuildwheel wheel
-
-    - name: install rename
-      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
-      shell: bash
-      run: |
-        
-        if [ x"${{ matrix.os }}" == x"macos-11" ]; then
-          brew install rename
-        else
-          sudo apt-get install -y rename
-        fi
-
-    - name: Set workspace root
-      id: workspace_root
-      shell: bash
-      run: |
-        
-        if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
-          WORKSPACE_ROOT="C:\a"
-        else
-          WORKSPACE_ROOT=${GITHUB_WORKSPACE}
-        fi
-        
-        echo "WORKSPACE_ROOT=$WORKSPACE_ROOT" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
-
-    # checkout this repo
-
-    - name: Checkout to workspace
-      run: |
-        git clone -b ${{ github.head_ref || github.ref_name }} https://github.com/${{ github.repository }}.git ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-        ls ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-
-    # ccache config stuff
-
-    # must come after cloning repo because otherwise git will complain dir not empty
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.9
-      with:
-        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
-        max-size: "5G"
-
-    - name: Configure ccache dir on host ubuntu
-      if: ${{ matrix.os == 'ubuntu-20.04' }}
-      shell: bash
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
-      id: configure_ccache_dir_on_host
-      run: |
-        
-        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-        mkdir -p $HOST_CCACHE_DIR
-        echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_ENV
-        echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
-
-    - name: Configure ccache
-      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
-      shell: bash
-      run: |
-        
-        if [ x"${{ matrix.os }}" == x"macos-11" ]; then
-          echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
-        else
-          echo "/usr/lib/ccache:/usr/lib64/ccache:/usr/lib/ccache/bin" >> $GITHUB_PATH
-        fi
+        MATRIX_OS: ${{ matrix.OS }}
+        MATRIX_ARCH: ${{ matrix.ARCH }}
 
     # setup llvm
 
     - name: Get LLVM
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
         
@@ -247,53 +156,51 @@ jobs:
         unzip -q llvm.zip
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
         mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
-        echo "LLVM_PROJECT_COMMIT=$LLVM_PROJECT_COMMIT" | tee -a $GITHUB_ENV
-        echo "DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }}" | tee -a $GITHUB_ENV
 
     # build
 
     - name: cibuildwheel
-      if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
+      if: ${{ matrix.OS != 'ubuntu-20.04' || matrix.ARCH != 'aarch64' }}
       shell: bash
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
-        APPLY_PATCHES=${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }} \
-        BUILD_CUDA=${{ matrix.build_cuda }} \
-        BUILD_OPENMP=${{ matrix.build_openmp }} \
-        BUILD_VULKAN=${{ matrix.build_vulkan }} \
-        CIBW_ARCHS=${{ matrix.arch }} \
+        APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }} \
+        BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
+        BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
+        BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
+        CIBW_ARCHS=${{ matrix.ARCH }} \
         CMAKE_GENERATOR=Ninja \
         DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
-        HOST_CCACHE_DIR=${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }} \
+        HOST_CCACHE_DIR=${{ steps.setup_ccache.outputs.HOST_CCACHE_DIR }} \
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
-        MATRIX_OS=${{ matrix.os }} \
+        MATRIX_OS=${{ matrix.OS }} \
         PARALLEL_LEVEL=2 \
         cibuildwheel --output-dir wheelhouse
 
     - name: build aarch ubuntu wheel
-      if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
         
-        export APPLY_PATCHES=${{ inputs.apply_patches == '' && 'true' || inputs.apply_patches }}
+        export APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }}
         ./scripts/apply_patches.sh
         
-        BUILD_CUDA=${{ matrix.build_cuda }} \
-        BUILD_OPENMP=${{ matrix.build_openmp }} \
-        BUILD_VULKAN=${{ matrix.build_vulkan }} \
-        CIBW_ARCHS=${{ matrix.arch }} \
+        BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
+        BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
+        BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
+        CIBW_ARCHS=${{ matrix.ARCH }} \
         CMAKE_GENERATOR=Ninja \
         DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
-        MATRIX_OS=${{ matrix.os }} \
+        MATRIX_OS=${{ matrix.OS }} \
         PIP_FIND_LINKS="https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" \
         pip wheel . -v -w wheelhouse
 
     - name: Download cache from container ubuntu
-      if: (matrix.os == 'ubuntu-20.04' && matrix.arch == 'x86_64') && (success() || failure())
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      if: (matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'x86_64') && (success() || failure())
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
         
@@ -305,47 +212,50 @@ jobs:
         ccache -s
 
     - name: rename non-windows
-      if: ${{ matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-11' }}
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-11' }}
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
         
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
         
-        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ] && [ x"${{ matrix.arch }}" == x"aarch64" ]; then
+        if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ] && [ x"${{ matrix.ARCH }}" == x"aarch64" ]; then
           rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
         fi
 
     - name: rename windows
-      if: ${{ matrix.os == 'windows-2019' }}
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      if: ${{ matrix.OS == 'windows-2019' }}
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
 
     - name: Build native_tools wheel
-      if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
-      working-directory: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       id: build_native_tools_wheel
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
-          if [ x"${{ matrix.os }}" == x"windows-2019" ]; then
+          if [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
             TOOL="$TOOL.exe"
           fi
           unzip -j wheelhouse/mlir-*whl "mlir/bin/$TOOL" -d native_tools/
         done
         
-        if [ x"${{ matrix.os }}" == x"ubuntu-20.04" ]; then
-          PLAT="manylinux_2_17"
-        elif [ x"${{ matrix.os }}" == x"macos-11" ]; then
+        if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ]; then
+          PLAT="linux"
+        elif [ x"${{ matrix.OS }}" == x"macos-11" ]; then
           PLAT="macosx_11_0"
-        elif [ x"${{ matrix.os }}" == x"windows-2019" ]; then
+        elif [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
           PLAT="win"
         fi
         
-        PLAT=${PLAT}_$(echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+        PLAT=${PLAT}_$(echo ${{ matrix.ARCH }} | tr '[:upper:]' '[:lower:]')
         pushd native_tools
+
+        DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
+        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
         python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
+        
         popd
 
     # done
@@ -354,12 +264,12 @@ jobs:
       if: success() || failure()
       uses: actions/upload-artifact@v3
       with:
-        path: ${{ steps.workspace_root.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+        path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
         name: build_artifact
 
   upload_distro_wheels:
 
-    needs: [build, get_llvm_project_commit]
+    needs: build
 
     runs-on: ubuntu-latest
 
@@ -409,7 +319,7 @@ jobs:
       contents: write
       id-token: write
 
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@pip_install_mlir
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@refactor
     secrets: inherit # pass all secrets
     with:
-      mlir_commit: "18.0.0.${{ needs.get_llvm_project_commit.outputs.DATETIME }}+${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"
+      MLIR_WHEEL_VERSION: "18.0.0.${{ needs.get_llvm_project_commit.outputs.DATETIME }}+${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"
