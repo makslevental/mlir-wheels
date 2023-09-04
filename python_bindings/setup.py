@@ -71,12 +71,15 @@ class CMakeBuild(build_ext):
             shutil.move(MLIR_INSTALL_ABS_PATH, "/tmp/m")
             MLIR_INSTALL_ABS_PATH = Path("/tmp/m").absolute()
 
+        GLIBCXX_USE_CXX11_ABI = os.environ.get("GLIBCXX_USE_CXX11_ABI", 0)
+
         cmake_args = [
             f"-G {cmake_generator}",
             "-DLLVM_CCACHE_BUILD=ON",
             "-DMLIR_INCLUDE_TESTS=ON",
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
+            f"-D_GLIBCXX_USE_CXX11_ABI={GLIBCXX_USE_CXX11_ABI}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
