@@ -2,145 +2,119 @@ name: Wheels
 
 on:
   workflow_dispatch:
+  workflow_call:
     inputs:
-      mlir_commit:
+      MLIR_WHEEL_VERSION:
         description: 'mlir commit'
         type: string
         required: false
         default: ''
 
-  pull_request:
-  workflow_run:
-    workflows: ["Distro"]
-    types:
-      - completed
-
 jobs:
 
   build:
+
     continue-on-error: true
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.OS }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-            arch: x86_64
+          - OS: ubuntu-20.04
+            ARCH: x86_64
 
-          - os: ubuntu-20.04
-            arch: aarch64
+          - OS: ubuntu-20.04
+            ARCH: aarch64
 
-          - os: ubuntu-20.04
-            arch: x86_64
-            build_cuda: true
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_CUDA: true
 
-          - os: ubuntu-20.04
-            arch: x86_64
-            build_vulkan: true
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_VULKAN: true
 
-          - os: ubuntu-20.04
-            arch: x86_64
-            build_openmp: true
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_OPENMP: true
 
-          - os: windows-2019
-            arch: AMD64
+          - OS: windows-2019
+            ARCH: AMD64
 
-          - os: macos-11
-            arch: x86_64
+          - OS: macos-11
+            ARCH: x86_64
 
-          - os: macos-11
-            arch: arm64
+          - OS: macos-11
+            ARCH: arm64
 
-          - os: macos-11
-            arch: arm64
-            build_vulkan: true
+          - OS: macos-11
+            ARCH: arm64
+            BUILD_VULKAN: true
 
-          - os: macos-11
-            arch: arm64
-            build_openmp: true
+          - OS: macos-11
+            ARCH: arm64
+            BUILD_OPENMP: true
+
     steps:
-      - name: Free disk space
-        if: contains(matrix.os, 'ubuntu')
-        uses: jlumbroso/free-disk-space@76866dbe54312617f00798d1762df7f43def6e5c # v1.2.0
+      - name: Checkout actions
+        uses: actions/checkout@v3
         with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          swap-storage: false # This frees space on the wrong partition.
-          tool-cache: false # This includes Python, which we need.
+          sparse-checkout: |
+            .github/actions
 
-      - uses: actions/checkout@v3
-
-      - uses: ilammy/msvc-dev-cmd@v1.4.1
-        if: ${{ matrix.os == 'windows-2019' }}
-
-      - name: Set up Visual Studio shell
-        if: ${{ matrix.os == 'windows-2019' }}
-        uses: egor-tensin/vs-shell@v2
+      - uses: ./.github/actions/setup_base
+        id: setup_base
         with:
-          arch: x64
+          MATRIX_OS: ${{ matrix.OS }}
+          MATRIX_ARCH: ${{ matrix.ARCH }}
 
-      - name: MS Build
-        if: ${{ matrix.os == 'windows-2019' }}
-        uses: microsoft/setup-msbuild@v1.1
-
-      - uses: actions/setup-python@v4
+      - uses: ./.github/actions/setup_ccache
+        id: setup_ccache
         with:
-          python-version: '3.11'
+          MATRIX_OS: ${{ matrix.OS }}
+          MATRIX_ARCH: ${{ matrix.ARCH }}
 
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.9
-        with:
-          key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.arch }}  # Make cache specific to OS
-          max-size: "5G"
-
-      - name: Configure ccache dir on host
-        id: configure_ccache_dir_on_host
-        if: ${{ matrix.os == 'ubuntu-20.04' }}
-        run: |
-          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          mkdir -p $HOST_CCACHE_DIR
-          echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
+      # build
 
       - name: cibuildwheel python bindings
-        if: ${{ matrix.os != 'ubuntu-20.04' || matrix.arch != 'aarch64' }}
+        if: ${{ matrix.OS != 'ubuntu-20.04' || matrix.ARCH != 'aarch64' }}
         shell: bash
+        working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
-          cp -R scripts python_bindings/scripts
           
+          cp -R scripts python_bindings/scripts
           pushd python_bindings
           
-          pip install cibuildwheel
-          
-          MATRIX_OS=${{ matrix.os }} \
-          CIBW_ARCHS=${{ matrix.arch }} \
-          HOST_CCACHE_DIR=${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }} \
-          BUILD_CUDA=${{ matrix.build_cuda }} \
-          BUILD_OPENMP=${{ matrix.build_openmp }} \
-          BUILD_VULKAN=${{ matrix.build_vulkan }} \
-          MLIR_COMMIT=${{ inputs.mlir_commit }} \
+          BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
+          BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
+          BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
+          CIBW_ARCHS=${{ matrix.ARCH }} \
           CMAKE_GENERATOR=Ninja \
+          HOST_CCACHE_DIR=${{ steps.setup_ccache.outputs.HOST_CCACHE_DIR }} \
+          MATRIX_OS=${{ matrix.OS }} \
+          MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
           cibuildwheel --output-dir ../wheelhouse
           
           popd
 
       - name: cibuildwheel python bindings aarch64 cp310
+        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
         uses: uraimo/run-on-arch-action@v2
-        if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
         with:
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.ARCH }}
           distro: ubuntu20.04
-          dockerRunArgs: |
-            --volume "${PWD}:/workspace"
+          dockerRunArgs: --volume "${{ steps.setup_base.outputs.WORKSPACE_ROOT }}:/workspace"
           install: |
+            
             apt-get update -q -y
             apt-get install -q -y ninja-build build-essential cmake python3 python3-pip python-is-python3 curl
             curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
             usermod -aG docker root
             pip install cibuildwheel
+
           run: |
+            
             cd /workspace
             
             HOST_CCACHE_DIR=/workspace/.ccache
@@ -150,42 +124,36 @@ jobs:
             
             pushd python_bindings
             
-            MATRIX_OS=${{ matrix.os }} \
-            CIBW_ARCHS=${{ matrix.arch }} \
-            HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
-            BUILD_CUDA=${{ matrix.build_cuda }} \
-            BUILD_OPENMP=${{ matrix.build_openmp }} \
-            BUILD_VULKAN=${{ matrix.build_vulkan }} \
-            MLIR_COMMIT=${{ inputs.mlir_commit }} \
-            CMAKE_GENERATOR=Ninja \
+            BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
+            BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
+            BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
+            CIBW_ARCHS=${{ matrix.ARCH }} \
             CIBW_BUILD=cp310-manylinux_aarch64 \
+            CMAKE_GENERATOR=Ninja \
+            HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
+            MATRIX_OS=${{ matrix.OS }} \
+            MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
             cibuildwheel --output-dir ../wheelhouse
             
             popd
 
             # cp -a ./wheelhouse/.ccache/. /.ccache/
-
-      - name: Upload wheels
-        if: success() || failure()
-        uses: actions/upload-artifact@v3
-        with:
-          path: wheelhouse/*.whl
-          name: build_artifact_python_bindings
 
       - name: cibuildwheel python bindings aarch64 cp311
+        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
         uses: uraimo/run-on-arch-action@v2
-        if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'aarch64' }}
         with:
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.ARCH }}
           distro: ubuntu20.04
-          dockerRunArgs: |
-            --volume "${PWD}:/workspace"
+          dockerRunArgs: --volume "${{ steps.setup_base.outputs.WORKSPACE_ROOT }}:/workspace"
           install: |
+            
             apt-get update -q -y
             apt-get install -q -y ninja-build build-essential cmake python3 python3-pip python-is-python3 curl
             curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
             usermod -aG docker root
             pip install cibuildwheel
+
           run: |
             cd /workspace
             
@@ -196,38 +164,40 @@ jobs:
             
             pushd python_bindings
             
-            MATRIX_OS=${{ matrix.os }} \
-            CIBW_ARCHS=${{ matrix.arch }} \
-            HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
-            BUILD_CUDA=${{ matrix.build_cuda }} \
-            BUILD_OPENMP=${{ matrix.build_openmp }} \
-            BUILD_VULKAN=${{ matrix.build_vulkan }} \
-            MLIR_COMMIT=${{ inputs.mlir_commit }} \
-            CMAKE_GENERATOR=Ninja \
+            BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
+            BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
+            BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
+            CIBW_ARCHS=${{ matrix.ARCH }} \
             CIBW_BUILD=cp311-manylinux_aarch64 \
+            CMAKE_GENERATOR=Ninja \
+            HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
+            MATRIX_OS=${{ matrix.OS }} \
+            MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
             cibuildwheel --output-dir ../wheelhouse
             
             popd
 
             # cp -a ./wheelhouse/.ccache/. /.ccache/
 
+      # done
+
       - name: Upload wheels
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          path: wheelhouse/*.whl
+          path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
           name: build_artifact_python_bindings
 
-
   upload_bindings_wheels:
+
     needs: build
 
     runs-on: ubuntu-latest
-    #    environment: pypi
-    #    if: github.event_name == 'release' && github.event.action == 'published'
+
     permissions:
       id-token: write
       contents: write
+
     steps:
       - uses: actions/download-artifact@v3
         with:
