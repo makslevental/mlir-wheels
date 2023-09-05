@@ -72,8 +72,6 @@ pushd "$HERE/../native_tools"
 python setup.py bdist_wheel --dist-dir ../wheelhouse --plat "$PLAT"
 popd
 
-unzip $HERE/../wheelhouse/mlir-*whl -x "mlir/bin/*" -d $HERE/../python_bindings
-
 cp -R "$HERE/../scripts" "$HERE/../python_bindings"
 
 pushd "$HERE/../python_bindings"

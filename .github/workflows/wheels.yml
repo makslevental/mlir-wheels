@@ -2,10 +2,16 @@ name: Wheels
 
 on:
   workflow_dispatch:
+    inputs:
+      MLIR_WHEEL_VERSION:
+        description: 'mlir wheel version'
+        type: string
+        required: false
+        default: ''
   workflow_call:
     inputs:
       MLIR_WHEEL_VERSION:
-        description: 'mlir commit'
+        description: 'mlir wheel version'
         type: string
         required: false
         default: ''
@@ -23,9 +29,6 @@ jobs:
         include:
           - OS: ubuntu-20.04
             ARCH: x86_64
-
-          - OS: ubuntu-20.04
-            ARCH: aarch64
 
           - OS: ubuntu-20.04
             ARCH: x86_64
@@ -78,7 +81,6 @@ jobs:
       # build
 
       - name: cibuildwheel python bindings
-        if: ${{ matrix.OS != 'ubuntu-20.04' || matrix.ARCH != 'aarch64' }}
         shell: bash
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
@@ -98,86 +100,100 @@ jobs:
           
           popd
 
-      - name: cibuildwheel python bindings aarch64 cp310
-        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
-        uses: uraimo/run-on-arch-action@v2
+      - name: Download cache from container ubuntu
+        if: matrix.OS == 'ubuntu-20.04' && (success() || failure())
+        working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+        shell: bash
+        run: |
+          
+          ccache -s
+          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+          rm -rf $HOST_CCACHE_DIR
+          mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
+          ls -la $HOST_CCACHE_DIR
+          ccache -s
+
+      # done
+
+      - name: Upload wheels
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
         with:
-          arch: ${{ matrix.ARCH }}
-          distro: ubuntu20.04
-          dockerRunArgs: --volume "${{ steps.setup_base.outputs.WORKSPACE_ROOT }}:/workspace"
-          install: |
-            
-            apt-get update -q -y
-            apt-get install -q -y ninja-build build-essential cmake python3 python3-pip python-is-python3 curl
-            curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
-            usermod -aG docker root
-            pip install cibuildwheel
+          path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+          name: build_artifact_python_bindings
 
-          run: |
-            
-            cd /workspace
-            
-            HOST_CCACHE_DIR=/workspace/.ccache
-            ls -l $HOST_CCACHE_DIR
-            
-            cp -R scripts python_bindings/
-            
-            pushd python_bindings
-            
-            BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
-            BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
-            BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
-            CIBW_ARCHS=${{ matrix.ARCH }} \
-            CIBW_BUILD=cp310-manylinux_aarch64 \
-            CMAKE_GENERATOR=Ninja \
-            HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
-            MATRIX_OS=${{ matrix.OS }} \
-            MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
-            cibuildwheel --output-dir ../wheelhouse
-            
-            popd
+  build-linux-aarch64:
 
-            # cp -a ./wheelhouse/.ccache/. /.ccache/
+    continue-on-error: true
 
-      - name: cibuildwheel python bindings aarch64 cp311
-        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
-        uses: uraimo/run-on-arch-action@v2
+    runs-on: ${{ matrix.OS }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - OS: ubuntu-20.04
+            ARCH: aarch64
+            PY_VERSION: "cp310"
+
+          - OS: ubuntu-20.04
+            ARCH: aarch64
+            PY_VERSION: "cp311"
+
+    steps:
+      - name: Checkout actions
+        uses: actions/checkout@v3
         with:
-          arch: ${{ matrix.ARCH }}
-          distro: ubuntu20.04
-          dockerRunArgs: --volume "${{ steps.setup_base.outputs.WORKSPACE_ROOT }}:/workspace"
-          install: |
-            
-            apt-get update -q -y
-            apt-get install -q -y ninja-build build-essential cmake python3 python3-pip python-is-python3 curl
-            curl -fsSL test.docker.com -o get-docker.sh && sh get-docker.sh
-            usermod -aG docker root
-            pip install cibuildwheel
+          sparse-checkout: |
+            .github/actions
 
-          run: |
-            cd /workspace
-            
-            HOST_CCACHE_DIR=/workspace/.ccache
-            ls -l $HOST_CCACHE_DIR
-            
-            cp -R scripts python_bindings/
-            
-            pushd python_bindings
-            
-            BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
-            BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
-            BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
-            CIBW_ARCHS=${{ matrix.ARCH }} \
-            CIBW_BUILD=cp311-manylinux_aarch64 \
-            CMAKE_GENERATOR=Ninja \
-            HOST_CCACHE_DIR=$HOST_CCACHE_DIR \
-            MATRIX_OS=${{ matrix.OS }} \
-            MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
-            cibuildwheel --output-dir ../wheelhouse
-            
-            popd
+      - uses: ./.github/actions/setup_base
+        id: setup_base
+        with:
+          MATRIX_OS: ${{ matrix.OS }}
+          MATRIX_ARCH: ${{ matrix.ARCH }}
 
-            # cp -a ./wheelhouse/.ccache/. /.ccache/
+      - uses: ./.github/actions/setup_ccache
+        id: setup_ccache
+        with:
+          MATRIX_OS: ${{ matrix.OS }}
+          MATRIX_ARCH: ${{ matrix.ARCH }}
+
+      # build
+
+      - name: cibuildwheel python bindings aarch64
+        shell: bash
+        working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+        run: |
+          
+          cp -R scripts python_bindings/scripts
+          pushd python_bindings
+          
+          BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
+          BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
+          BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
+          CIBW_ARCHS=${{ matrix.ARCH }} \
+          CIBW_BUILD=${{ matrix.PY_VERSION }}-manylinux_aarch64 \
+          CIBW_CONTAINER_ENGINE="docker; create_args: --platform=linux/aarch64" \
+          CMAKE_GENERATOR=Ninja \
+          HOST_CCACHE_DIR=${{ steps.setup_ccache.outputs.HOST_CCACHE_DIR }} \
+          MATRIX_OS=${{ matrix.OS }} \
+          MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
+          cibuildwheel --output-dir ../wheelhouse
+          
+          popd
+
+      - name: Download cache from container ubuntu
+        if: success() || failure()
+        working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+        shell: bash
+        run: |
+          
+          ccache -s
+          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+          rm -rf $HOST_CCACHE_DIR
+          mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
+          ls -la $HOST_CCACHE_DIR
+          ccache -s
 
       # done
 
@@ -190,7 +206,7 @@ jobs:
 
   upload_bindings_wheels:
 
-    needs: build
+    needs: [build, build-linux-aarch64]
 
     runs-on: ubuntu-latest
 
