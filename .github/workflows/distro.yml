@@ -79,16 +79,20 @@ jobs:
     continue-on-error: true
 
     runs-on: ${{ matrix.OS }}
+    container:
+      image: ${{ matrix.CONTAINER }}
+      options: --user 1001
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - OS: ubuntu-20.04
             ARCH: x86_64
 
-          - OS: ubuntu-20.04
+          - OS: ubuntu-22.04
             ARCH: aarch64
+            CONTAINER: 'ghcr.io/makslevental/mlir-wheels:main'
 
           - OS: ubuntu-20.04
             ARCH: x86_64
@@ -149,7 +153,7 @@ jobs:
 
     - name: Get LLVM
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      shell: bash
+      shell: bash -l {0}
       run: |
         
         curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
@@ -161,7 +165,7 @@ jobs:
 
     - name: cibuildwheel
       if: ${{ matrix.OS != 'ubuntu-20.04' || matrix.ARCH != 'aarch64' }}
-      shell: bash
+      shell: bash -l {0}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
@@ -172,7 +176,6 @@ jobs:
         CIBW_ARCHS=${{ matrix.ARCH }} \
         CMAKE_GENERATOR=Ninja \
         DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
-        GLIBCXX_USE_CXX11_ABI=0 \
         HOST_CCACHE_DIR=${{ steps.setup_ccache.outputs.HOST_CCACHE_DIR }} \
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
         MATRIX_OS=${{ matrix.OS }} \
@@ -180,9 +183,9 @@ jobs:
         cibuildwheel --output-dir wheelhouse
 
     - name: build aarch ubuntu wheel
-      if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
+      if: matrix.ARCH == 'aarch64'
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      shell: bash
+      shell: bash -l {0}
       run: |
         
         export APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }}
@@ -194,7 +197,6 @@ jobs:
         CIBW_ARCHS=${{ matrix.ARCH }} \
         CMAKE_GENERATOR=Ninja \
         DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
-        GLIBCXX_USE_CXX11_ABI=0 \
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
         MATRIX_OS=${{ matrix.OS }} \
         PIP_FIND_LINKS="https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" \
@@ -203,7 +205,7 @@ jobs:
     - name: Download cache from container ubuntu
       if: (matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'x86_64') && (success() || failure())
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      shell: bash
+      shell: bash -l {0}
       run: |
         
         ccache -s
@@ -216,7 +218,7 @@ jobs:
     - name: rename non-windows
       if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-11' }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      shell: bash
+      shell: bash -l {0}
       run: |
         
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
@@ -232,7 +234,7 @@ jobs:
 
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      shell: bash
+      shell: bash -l {0}
       id: build_native_tools_wheel
       run: |
         

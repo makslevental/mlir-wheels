@@ -71,7 +71,7 @@ class CMakeBuild(build_ext):
             shutil.move(MLIR_INSTALL_ABS_PATH, "/tmp/m")
             MLIR_INSTALL_ABS_PATH = Path("/tmp/m").absolute()
 
-        GLIBCXX_USE_CXX11_ABI = os.environ.get("GLIBCXX_USE_CXX11_ABI", 0)
+        GLIBCXX_USE_CXX11_ABI = os.environ.get("GLIBCXX_USE_CXX11_ABI", 1)
 
         cmake_args = [
             f"-G {cmake_generator}",
@@ -222,6 +222,5 @@ setup(
     ext_modules=[CMakeExtension("_mlir", sourcedir=".")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    python_requires=">=3.10",
     download_url=llvm_url,
 )

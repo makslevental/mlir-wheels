@@ -26,7 +26,7 @@ runs:
 
     - name: Configure ccache dir on host ubuntu
       if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' }}
-      shell: bash
+      shell: bash -l {0}
       id: configure_ccache_dir_on_host
       run: |
         
@@ -36,7 +36,7 @@ runs:
 
     - name: Configure ccache
       if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' || inputs.MATRIX_OS == 'macos-11' }}
-      shell: bash
+      shell: bash -l {0}
       run: |
         
         if [ x"${{ inputs.MATRIX_OS }}" == x"macos-11" ]; then

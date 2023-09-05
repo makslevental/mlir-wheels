@@ -55,7 +55,7 @@ runs:
       uses: microsoft/setup-msbuild@v1.1
 
     - name: Free disk space
-      if: contains(inputs.MATRIX_OS, 'ubuntu')
+      if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' }}
       uses: jlumbroso/free-disk-space@76866dbe54312617f00798d1762df7f43def6e5c # v1.2.0
       with:
         android: true
@@ -66,6 +66,7 @@ runs:
         tool-cache: false # This includes Python, which we need.
 
     - uses: actions/setup-python@v4
+      if: inputs.MATRIX_ARCH != 'aarch64'
       with:
         python-version: '3.11'
 
@@ -74,20 +75,27 @@ runs:
 
     - name: Install cross-compilation toolchain
       shell: bash
-      if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' && inputs.MATRIX_ARCH == 'aarch64' }}
+      if: contains(inputs.MATRIX_OS, 'ubuntu') && inputs.MATRIX_ARCH == 'aarch64'
       run: |
         
         sudo apt-get update
         sudo apt-get install -y binutils-aarch64-linux-gnu \
-          g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
+          g++-aarch64-linux-gnu gcc-aarch64-linux-gnu wget
+        
+        wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+        bash $HOME/miniconda.sh -b -p $HOME/miniconda
+        export PATH=$HOME/miniconda/bin:$PATH
+        eval "$(conda shell.bash hook)"
+        conda init bash
+        conda install python=3.10
 
     - name: pip install standard tools
-      shell: bash
+      shell: bash -l {0}
       run: pip install cibuildwheel wheel
 
     - name: install rename
       if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' || inputs.MATRIX_OS == 'macos-11' }}
-      shell: bash
+      shell: bash -l {0}
       run: |
         
         if [ x"${{ inputs.MATRIX_OS }}" == x"macos-11" ]; then
@@ -106,7 +114,7 @@ runs:
 
     - name: Set workspace root
       id: workspace_root
-      shell: bash
+      shell: bash -l {0}
       working-directory: ${{ env.TEMP }}
       run: |
         
