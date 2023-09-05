@@ -2,6 +2,12 @@ name: Wheels
 
 on:
   workflow_dispatch:
+    inputs:
+      MLIR_WHEEL_VERSION:
+        description: 'mlir commit'
+        type: string
+        required: false
+        default: ''
   workflow_call:
     inputs:
       MLIR_WHEEL_VERSION:

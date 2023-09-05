@@ -85,6 +85,7 @@ class CMakeBuild(build_ext):
         cfg = "Release"
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
+        GLIBCXX_USE_CXX11_ABI = os.environ.get("GLIBCXX_USE_CXX11_ABI", 0)
 
         cmake_args = [
             f"-G {cmake_generator}",
@@ -117,6 +118,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
+            f"-DGLIBCXX_USE_CXX11_ABI={GLIBCXX_USE_CXX11_ABI}",
         ]
         if platform.system() == "Windows":
             cmake_args += [

@@ -41,6 +41,10 @@ if(MSVC)
   )
 endif()
 
+if (DEFINED GLIBCXX_USE_CXX11_ABI)
+  add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI})
+endif()
+
 find_package(MLIR REQUIRED CONFIG)
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")

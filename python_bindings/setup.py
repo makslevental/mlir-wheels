@@ -79,7 +79,7 @@ class CMakeBuild(build_ext):
             "-DMLIR_INCLUDE_TESTS=ON",
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
-            f"-D_GLIBCXX_USE_CXX11_ABI={GLIBCXX_USE_CXX11_ABI}",
+            f"-DGLIBCXX_USE_CXX11_ABI={GLIBCXX_USE_CXX11_ABI}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
