@@ -182,6 +182,17 @@ jobs:
           
           popd
 
+      - name: Reset datetime ccache
+        working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+        shell: bash
+        run: |
+          
+          ccache -s
+          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+          DATETIME=$(date +"%Y%m%d%H")
+          find $HOST_CCACHE_DIR -exec touch -a -m -t "$DATETIME""00" {} \;
+          ccache -s
+
       - name: Download cache from container ubuntu
         if: success() || failure()
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}

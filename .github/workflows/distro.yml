@@ -80,6 +80,9 @@ jobs:
 
     runs-on: ${{ matrix.OS }}
 
+    outputs:
+      MLIR_WHEEL_VERSION: ${{ steps.get_wheel_version.outputs.MLIR_WHEEL_VERSION }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -198,6 +201,24 @@ jobs:
         PIP_FIND_LINKS="https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" \
         pip wheel . -v -w wheelhouse
 
+    - name: Get wheel version
+      id: get_wheel_version
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      shell: bash
+      run: |
+        pip install pkginfo
+        WHL=$(ls wheelhouse/mlir-*whl)
+        echo "MLIR_WHEEL_VERSION=$(python -c "import pkginfo; w = pkginfo.Wheel('$WHL'); print(w.version.split('+')[0] + '+' + w.version.split('+')[1].rsplit('.', 1)[-1])")" | tee -a $GITHUB_OUTPUT
+
+    - name: Reset datetime ccache
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      shell: bash
+      run: |
+        
+        ccache --print-stats
+        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+        find $HOST_CCACHE_DIR -exec touch -a -m -t "${{ needs.get_llvm_project_commit.outputs.DATETIME }}00" {} \;
+
     - name: Download cache from container ubuntu
       if: (matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'x86_64') && (success() || failure())
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
@@ -313,7 +334,7 @@ jobs:
 
   call-build-python-bindings:
 
-    needs: [upload_distro_wheels, get_llvm_project_commit]
+    needs: [build, upload_distro_wheels, get_llvm_project_commit]
 
     permissions:
       contents: write
@@ -322,4 +343,4 @@ jobs:
     uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
     secrets: inherit # pass all secrets
     with:
-      MLIR_WHEEL_VERSION: "18.0.0.${{ needs.get_llvm_project_commit.outputs.DATETIME }}+${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}"
+      MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}
