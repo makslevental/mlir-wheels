@@ -129,3 +129,15 @@ runs:
         fi
         
         echo "WORKSPACE_ROOT=$WORKSPACE_ROOT" | tee -a $GITHUB_OUTPUT
+
+    - name: Set up QEMU
+      if: contains(inputs.MATRIX_OS, 'ubuntu')
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: ${{ inputs.MATRIX_ARCH }}
+
+    - name: Docker prune
+      if: contains(inputs.MATRIX_OS, 'ubuntu')
+      shell: bash
+      run: |
+        docker system prune -a -f
