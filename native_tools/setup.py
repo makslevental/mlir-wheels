@@ -3,9 +3,6 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import os
 import platform
-import re
-from datetime import datetime
-from pathlib import Path
 
 from setuptools import setup
 
@@ -18,24 +15,7 @@ def get_exe_suffix():
     return suffix
 
 
-cmake_txt = open(
-    Path(__file__).parent.parent.absolute() / "llvm-project" / "llvm" / "CMakeLists.txt"
-).read()
-llvm_version = []
-for v in ["LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH"]:
-    vn = re.findall(rf"set\({v} (\d+)\)", cmake_txt)
-    assert vn, f"couldn't find {v} in cmake txt"
-    llvm_version.append(vn[0])
-
-
-commit_hash = os.environ.get("LLVM_PROJECT_COMMIT", "DEADBEEF")
-
-now = datetime.now()
-llvm_datetime = os.environ.get(
-    "DATETIME", f"{now.year}{now.month}{now.day}{now.hour}"
-)
-
-version = f"{llvm_version[0]}.{llvm_version[1]}.{llvm_version[2]}.{llvm_datetime}+{commit_hash}"
+version = os.environ.get("MLIR_WHEEL_VERSION", "DEADBEEF")
 
 data_files = []
 for bin in [

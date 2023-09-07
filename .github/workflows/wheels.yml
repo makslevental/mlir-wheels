@@ -77,6 +77,7 @@ jobs:
         with:
           MATRIX_OS: ${{ matrix.OS }}
           MATRIX_ARCH: ${{ matrix.ARCH }}
+          EXTRA_KEY: ${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
       # build
 

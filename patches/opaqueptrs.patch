@@ -1,0 +1,97 @@
+diff --git a/llvm/lib/IR/AsmWriter.cpp b/llvm/lib/IR/AsmWriter.cpp
+index e190d8212790..8a4f757b9cd3 100644
+--- a/llvm/lib/IR/AsmWriter.cpp
++++ b/llvm/lib/IR/AsmWriter.cpp
+@@ -71,6 +71,7 @@
+ #include "llvm/Support/ErrorHandling.h"
+ #include "llvm/Support/Format.h"
+ #include "llvm/Support/FormattedStream.h"
++#include "llvm/Support/Process.h"
+ #include "llvm/Support/SaveAndRestore.h"
+ #include "llvm/Support/raw_ostream.h"
+ #include <algorithm>
+@@ -621,8 +622,14 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
+   }
+   case Type::TypedPointerTyID: {
+     TypedPointerType *TPTy = cast<TypedPointerType>(Ty);
+-    OS << "typedptr(" << *TPTy->getElementType() << ", "
+-       << TPTy->getAddressSpace() << ")";
++    auto noUseOpaquePointers =
++        llvm::sys::Process::GetEnv("NO_USE_OPAQUE_POINTERS").value_or("0") !=
++        "0";
++    if (noUseOpaquePointers)
++      OS << *TPTy->getElementType() << "*";
++    else
++      OS << "typedptr(" << *TPTy->getElementType() << ", "
++         << TPTy->getAddressSpace() << ")";
+     return;
+   }
+   case Type::TargetExtTyID:
+diff --git a/llvm/lib/IR/Value.cpp b/llvm/lib/IR/Value.cpp
+index 41260a98e3ce..d0452d24c3d7 100644
+--- a/llvm/lib/IR/Value.cpp
++++ b/llvm/lib/IR/Value.cpp
+@@ -45,8 +45,8 @@ static cl::opt<unsigned> UseDerefAtPointSemantics(
+ //===----------------------------------------------------------------------===//
+ static inline Type *checkType(Type *Ty) {
+   assert(Ty && "Value defined with a null type: Error!");
+-  assert(!isa<TypedPointerType>(Ty->getScalarType()) &&
+-         "Cannot have values with typed pointer types");
++//  assert(!isa<TypedPointerType>(Ty->getScalarType()) &&
++//         "Cannot have values with typed pointer types");
+   return Ty;
+ }
+ 
+diff --git a/mlir/lib/Conversion/LLVMCommon/LoweringOptions.cpp b/mlir/lib/Conversion/LLVMCommon/LoweringOptions.cpp
+index 3ffbbafd0f23..42ffc9fb5594 100644
+--- a/mlir/lib/Conversion/LLVMCommon/LoweringOptions.cpp
++++ b/mlir/lib/Conversion/LLVMCommon/LoweringOptions.cpp
+@@ -10,12 +10,19 @@
+ #include "mlir/IR/BuiltinTypes.h"
+ #include "mlir/Interfaces/DataLayoutInterfaces.h"
+ 
++#include "llvm/Support/Process.h"
++
+ using namespace mlir;
+ 
+ mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx)
+-    : LowerToLLVMOptions(ctx, DataLayout()) {}
++    : LowerToLLVMOptions(ctx, DataLayout()) {
++  useOpaquePointers =
++      llvm::sys::Process::GetEnv("NO_USE_OPAQUE_POINTERS").value_or("0") == "0";
++}
+ 
+ mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx,
+                                              const DataLayout &dl) {
+   indexBitwidth = dl.getTypeSizeInBits(IndexType::get(ctx));
++  useOpaquePointers =
++      llvm::sys::Process::GetEnv("NO_USE_OPAQUE_POINTERS").value_or("0") == "0";
+ }
+diff --git a/mlir/lib/Target/LLVMIR/TypeToLLVM.cpp b/mlir/lib/Target/LLVMIR/TypeToLLVM.cpp
+index 6d8b415ff09d..dccf615da7fd 100644
+--- a/mlir/lib/Target/LLVMIR/TypeToLLVM.cpp
++++ b/mlir/lib/Target/LLVMIR/TypeToLLVM.cpp
+@@ -15,6 +15,7 @@
+ #include "llvm/IR/DataLayout.h"
+ #include "llvm/IR/DerivedTypes.h"
+ #include "llvm/IR/Type.h"
++#include "llvm/Support/Process.h"
+ 
+ using namespace mlir;
+ 
+@@ -106,6 +107,15 @@ private:
+ 
+   /// Translates the given pointer type.
+   llvm::Type *translate(LLVM::LLVMPointerType type) {
++    auto noUseOpaquePointers =
++        llvm::sys::Process::GetEnv("NO_USE_OPAQUE_POINTERS").value_or("0") !=
++        "0";
++    if (noUseOpaquePointers) {
++      if (type.isOpaque())
++        return llvm::PointerType::get(context, type.getAddressSpace());
++      return llvm::PointerType::get(translateType(type.getElementType()),
++                                    type.getAddressSpace());
++    }
+     return llvm::PointerType::get(context, type.getAddressSpace());
+   }
+ 
