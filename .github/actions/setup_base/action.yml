@@ -58,12 +58,7 @@ runs:
       if: contains(inputs.MATRIX_OS, 'ubuntu')
       uses: jlumbroso/free-disk-space@76866dbe54312617f00798d1762df7f43def6e5c # v1.2.0
       with:
-        android: true
-        dotnet: true
-        haskell: true
-        large-packages: true
-        swap-storage: false # This frees space on the wrong partition.
-        tool-cache: false # This includes Python, which we need.
+        tool-cache: true # This includes Python, which we need.
 
     - uses: actions/setup-python@v4
       with:
@@ -131,7 +126,7 @@ runs:
         echo "WORKSPACE_ROOT=$WORKSPACE_ROOT" | tee -a $GITHUB_OUTPUT
 
     - name: Set up QEMU
-      if: contains(inputs.MATRIX_OS, 'ubuntu')
+      if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' && inputs.MATRIX_ARCH == 'aarch64' }}
       uses: docker/setup-qemu-action@v1
       with:
         platforms: ${{ inputs.MATRIX_ARCH }}

@@ -147,6 +147,7 @@ jobs:
       with:
         MATRIX_OS: ${{ matrix.OS }}
         MATRIX_ARCH: ${{ matrix.ARCH }}
+        EXTRA_KEY: ${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
     # setup llvm
 
@@ -157,6 +158,7 @@ jobs:
         
         curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
         unzip -q llvm.zip
+        rm -rf llvm.zip
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
         mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
 
@@ -200,6 +202,20 @@ jobs:
         MATRIX_OS=${{ matrix.OS }} \
         PIP_FIND_LINKS="https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" \
         pip wheel . -v -w wheelhouse
+
+    - name: Clean llvm-project
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      shell: bash
+      run: |
+        
+        rm -rf llvm-project
+        rm -rf build
+
+    - name: Docker prune
+      if: contains(inputs.MATRIX_OS, 'ubuntu')
+      shell: bash
+      run: |
+        docker system prune -a -f
 
     - name: Get wheel version
       id: get_wheel_version
@@ -273,8 +289,7 @@ jobs:
         PLAT=${PLAT}_$(echo ${{ matrix.ARCH }} | tr '[:upper:]' '[:lower:]')
         pushd native_tools
 
-        DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
-        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
+        MLIR_WHEEL_VERSION=${{ steps.get_wheel_version.outputs.MLIR_WHEEL_VERSION }} \
         python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
         
         popd
