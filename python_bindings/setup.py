@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
@@ -78,6 +79,8 @@ class CMakeBuild(build_ext):
             "-DMLIR_INCLUDE_TESTS=ON",
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
+            f"-DPython3_LIBRARY_DIRS={sysconfig.get_config_var('LIBDIR')}",
+            f"-DPython3_INCLUDE_DIRS={sysconfig.get_config_var('INCLUDEPY')}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]

@@ -54,15 +54,38 @@ runs:
       if: ${{ inputs.MATRIX_OS == 'windows-2019' }}
       uses: microsoft/setup-msbuild@v1.1
 
+    - name: Install sudo
+      shell: bash
+      if: contains(inputs.MATRIX_OS, 'ubuntu')
+      run: |
+        
+        if ! command -v sudo &> /dev/null; then
+          apt-get update && apt-get install sudo
+        fi            
+
     - name: Free disk space
       if: contains(inputs.MATRIX_OS, 'ubuntu')
       uses: jlumbroso/free-disk-space@76866dbe54312617f00798d1762df7f43def6e5c # v1.2.0
+      continue-on-error: true
       with:
         tool-cache: true # This includes Python, which we need.
 
     - uses: actions/setup-python@v4
+      if: ${{ !contains(inputs.MATRIX_OS, 'ubuntu') }}
       with:
         python-version: '3.11'
+
+    - name: Install python and build-essential
+      shell: bash
+      if: contains(inputs.MATRIX_OS, 'ubuntu')
+      run: |
+        
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip python-is-python3 \
+          python3-dev build-essential git curl wget unzip
+        
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
 
     - name: Install Ninja
       uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17

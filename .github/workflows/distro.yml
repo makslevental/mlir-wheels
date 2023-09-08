@@ -43,6 +43,9 @@ on:
     # At minute 0 past hour 1. (see https://crontab.guru)
     - cron: '00 01 * * *'
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+
 jobs:
 
   get_llvm_project_commit:
@@ -80,6 +83,8 @@ jobs:
 
     runs-on: ${{ matrix.OS }}
 
+    container: ${{ matrix.CONTAINER }}
+
     outputs:
       MLIR_WHEEL_VERSION: ${{ steps.get_wheel_version.outputs.MLIR_WHEEL_VERSION }}
 
@@ -89,21 +94,26 @@ jobs:
         include:
           - OS: ubuntu-20.04
             ARCH: x86_64
+            CONTAINER: ubuntu:20.04
 
           - OS: ubuntu-20.04
             ARCH: aarch64
+            CONTAINER: ubuntu:20.04
 
           - OS: ubuntu-20.04
             ARCH: x86_64
             BUILD_CUDA: true
+            CONTAINER: ubuntu:20.04
 
           - OS: ubuntu-20.04
             ARCH: x86_64
             BUILD_VULKAN: true
+            CONTAINER: ubuntu:20.04
 
           - OS: ubuntu-20.04
             ARCH: x86_64
             BUILD_OPENMP: true
+            CONTAINER: ubuntu:20.04
 
           - OS: windows-2019
             ARCH: AMD64
@@ -192,6 +202,9 @@ jobs:
         export APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }}
         ./scripts/apply_patches.sh
         
+        pip install -r python_bindings/requirements.txt
+        
+        PIP_NO_BUILD_ISOLATION=false \
         BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
         BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
         BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \

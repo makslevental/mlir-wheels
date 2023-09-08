@@ -1,4 +1,5 @@
 import shutil
+import sysconfig
 from datetime import datetime
 import os
 import platform
@@ -115,6 +116,8 @@ class CMakeBuild(build_ext):
             "-DLLVM_VERSION_SUFFIX=",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
+            f"-DPython3_LIBRARY_DIRS={sysconfig.get_config_var('LIBDIR')}",
+            f"-DPython3_INCLUDE_DIRS={sysconfig.get_config_var('INCLUDEPY')}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
         ]
