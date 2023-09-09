@@ -1,0 +1,59 @@
+FROM ubuntu:18.04
+
+RUN apt-get update -q -y
+RUN apt-get -q -y install \
+    ninja-build \
+    build-essential \
+    cmake \
+    python3 \
+    python3-pip \
+    gcc-8 \
+    git
+
+RUN git clone https://github.com/llvm/llvm-project.git
+
+RUN apt-get install wget libssl-dev
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0.tar.gz \
+    && tar -zvxf cmake-3.20.0.tar.gz \
+    && cd cmake-3.20.0 \
+    && ./bootstrap \
+    && make -j \
+    && apt-get install checkinstall \
+    && checkinstall --pkgname=cmake --pkgversion="3.20-custom" --default \
+    && hash -r \
+    && apt-cache policy cmake \
+    && cmake --version
+
+WORKDIR llvm-project
+RUN mkdir build
+WORKDIR build
+
+RUN cmake -G Ninja \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DLLVM_BUILD_BENCHMARKS=OFF \
+      -DLLVM_BUILD_EXAMPLES=OFF \
+      -DLLVM_BUILD_RUNTIMES=OFF \
+      -DLLVM_BUILD_TESTS=OFF \
+      -DLLVM_BUILD_TOOLS=ON \
+      -DLLVM_BUILD_UTILS=ON \
+      -DLLVM_ENABLE_ASSERTIONS=ON \
+      -DLLVM_ENABLE_RTTI=ON \
+      -DLLVM_ENABLE_ZSTD=OFF \
+      -DLLVM_INCLUDE_BENCHMARKS=OFF \
+      -DLLVM_INCLUDE_EXAMPLES=OFF \
+      -DLLVM_INCLUDE_RUNTIMES=OFF \
+      -DLLVM_INCLUDE_TESTS=OFF \
+      -DLLVM_INCLUDE_TOOLS=ON \
+      -DLLVM_INCLUDE_UTILS=ON \
+      -DLLVM_INSTALL_UTILS=ON \
+      -DMLIR_BUILD_MLIR_C_DYLIB=1 \
+      -DMLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -DMLIR_ENABLE_EXECUTION_ENGINE=ON \
+      -DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON \
+      -DMLIR_INCLUDE_TESTS=ON \
+      -DPython3_EXECUTABLE=$(which python3) \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$PWD/install \
+      ../llvm
+
+RUN ninja install -j15
