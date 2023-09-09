@@ -1,5 +1,24 @@
+diff --git a/mlir/cmake/modules/AddMLIRPython.cmake b/mlir/cmake/modules/AddMLIRPython.cmake
+index 5349bb8302ab..261b267135f2 100644
+--- a/mlir/cmake/modules/AddMLIRPython.cmake
++++ b/mlir/cmake/modules/AddMLIRPython.cmake
+@@ -312,6 +312,14 @@ function(declare_mlir_dialect_python_bindings)
+       ADD_TO_PARENT "${_dialect_target}"
+       SOURCES "${dialect_filename}"
+     )
++    configure_file(
++      "${td_file}"
++      "${CMAKE_CURRENT_BINARY_DIR}/${ARG_TD_FILE}")
++    declare_mlir_python_sources("${_dialect_target}.python_bindings_td_file"
++      ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
++      ADD_TO_PARENT "${_dialect_target}"
++      SOURCES "${ARG_TD_FILE}"
++    )
+   endif()
+ endfunction()
+ 
 diff --git a/mlir/python/CMakeLists.txt b/mlir/python/CMakeLists.txt
-index 39dd7b006c89..42621997e4b2 100644
+index 05d09eaf7b8b..d5f1f09017c8 100644
 --- a/mlir/python/CMakeLists.txt
 +++ b/mlir/python/CMakeLists.txt
 @@ -41,6 +41,11 @@ declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
