@@ -51,9 +51,9 @@ runs:
         fi
 
     - name: Configure ccache
-      if: ${{ !contains(inputs.MATRIX_OS, 'ubuntu') }}
       shell: bash
       run: |
         ccache -z
         # See https://github.com/hendrikmuhs/ccache-action/issues/146
         ccache --set-config=compiler_check=content
+        ccache --set-config=sloppiness=locale,time_macros

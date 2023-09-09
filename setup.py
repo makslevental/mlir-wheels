@@ -128,6 +128,11 @@ class CMakeBuild(build_ext):
                 "-DLLVM_USE_CRT_MINSIZEREL=MT",
                 "-DLLVM_USE_CRT_RELEASE=MT",
             ]
+        else:
+            cmake_args += [
+                '-DCMAKE_C_FLAGS=-Wno-unused-but-set-parameter -Wno-unused-variable -Wno-unknown-warning-option',
+                '-DCMAKE_CXX_FLAGS=-Wno-unused-but-set-parameter -Wno-unused-variable -Wno-unknown-warning-option',
+            ]
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
