@@ -89,6 +89,8 @@ class CMakeBuild(build_ext):
                 "-DCMAKE_C_FLAGS=/MT",
                 "-DCMAKE_CXX_FLAGS=/MT",
             ]
+        else:
+            cmake_args += ["-DCMAKE_C_FLAGS=-Wno-everything", "-DCMAKE_CXX_FLAGS=-Wno-everything"]
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]

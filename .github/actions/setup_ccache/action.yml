@@ -27,7 +27,6 @@ runs:
         key: ${{ inputs.MATRIX_OS }}-${{ inputs.MATRIX_ARCH }}-${{ inputs.EXTRA_KEY }}
         max-size: "1G"
         verbose: 2
-        append-timestamp: false
 
     - name: Configure ccache dir on host ubuntu
       if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' }}

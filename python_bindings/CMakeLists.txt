@@ -30,8 +30,8 @@ project(PI LANGUAGES CXX C)
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 set(CMAKE_CXX_STANDARD
-    17
-    CACHE STRING "C++ standard to conform to")
+  17
+  CACHE STRING "C++ standard to conform to")
 
 if(MSVC)
   add_compile_options(
@@ -55,6 +55,8 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(TableGen)
 include(AddLLVM)
 include(AddMLIR)
+include(AddMLIRPython)
+include(MLIRDetectPythonEnv)
 include(HandleLLVMOptions)
 
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -62,9 +64,6 @@ include_directories(${MLIR_INCLUDE_DIRS})
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
-include(MLIRDetectPythonEnv)
-include(AddMLIRPython)
-mlir_detect_pybind11_install()
 mlir_configure_python_dev_packages()
 
 add_mlir_python_common_capi_library(
@@ -92,7 +91,7 @@ _flatten_mlir_python_targets(mlir_python_sources_deps MLIRPythonSources)
 add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
 if(NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-mlir-python-sources DEPENDS
-                           mlir-python-sources COMPONENT mlir-python-sources)
+    mlir-python-sources COMPONENT mlir-python-sources)
 endif()
 
 # ##############################################################################
