@@ -75,6 +75,7 @@ class CMakeBuild(build_ext):
             f"-G {cmake_generator}",
             "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
             "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
+            "-DLLVM_ENABLE_WARNINGS=OFF",
             "-DMLIR_INCLUDE_TESTS=ON",
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
@@ -89,8 +90,6 @@ class CMakeBuild(build_ext):
                 "-DCMAKE_C_FLAGS=/MT",
                 "-DCMAKE_CXX_FLAGS=/MT",
             ]
-        else:
-            cmake_args += ["-DCMAKE_C_FLAGS=-Wno-everything", "-DCMAKE_CXX_FLAGS=-Wno-everything"]
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
@@ -219,7 +218,7 @@ setup(
     description=f"MLIR Python bindings. Created at {now} build of {llvm_url}",
     long_description=f"MLIR Python bindings. Created at {now} build of [llvm/llvm-project/{commit_hash}]({llvm_url})",
     long_description_content_type="text/markdown",
-    ext_modules=[CMakeExtension("_mlir", sourcedir=".")],
+    ext_modules=[CMakeExtension("mlir", sourcedir=".")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     python_requires=">=3.10",

@@ -160,7 +160,7 @@ jobs:
           MATRIX_ARCH: ${{ matrix.ARCH }}
 
       - name: Set up QEMU
-        if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' && inputs.MATRIX_ARCH == 'aarch64' }}
+        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
         uses: docker/setup-qemu-action@v2
         with:
           platforms: ${{ matrix.ARCH }}
