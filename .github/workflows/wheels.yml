@@ -159,6 +159,12 @@ jobs:
           MATRIX_OS: ${{ matrix.OS }}
           MATRIX_ARCH: ${{ matrix.ARCH }}
 
+      - name: Set up QEMU
+        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: ${{ matrix.ARCH }}
+
       # build
 
       - name: cibuildwheel python bindings aarch64

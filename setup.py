@@ -98,6 +98,7 @@ class CMakeBuild(build_ext):
             "-DLLVM_CCACHE_BUILD=ON",
             "-DLLVM_ENABLE_ASSERTIONS=ON",
             "-DLLVM_ENABLE_RTTI=ON",
+            "-DLLVM_ENABLE_WARNINGS=OFF",
             "-DLLVM_ENABLE_ZSTD=OFF",
             "-DLLVM_INCLUDE_BENCHMARKS=OFF",
             "-DLLVM_INCLUDE_EXAMPLES=OFF",
@@ -127,11 +128,6 @@ class CMakeBuild(build_ext):
                 "-DCMAKE_CXX_FLAGS=/MT",
                 "-DLLVM_USE_CRT_MINSIZEREL=MT",
                 "-DLLVM_USE_CRT_RELEASE=MT",
-            ]
-        else:
-            cmake_args += [
-                '-DCMAKE_C_FLAGS=-Wno-unused-but-set-parameter -Wno-unused-variable -Wno-unknown-warning-option',
-                '-DCMAKE_CXX_FLAGS=-Wno-unused-but-set-parameter -Wno-unused-variable -Wno-unknown-warning-option',
             ]
 
         cmake_args_dict = get_cross_cmake_args()
