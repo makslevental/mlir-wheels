@@ -97,7 +97,7 @@ diff --git a/mlir/lib/CAPI/RegisterEverything/RegisterEverything.cpp b/mlir/lib/
 index c1c4a418b255..64c4bc9ac2c5 100644
 --- a/mlir/lib/CAPI/RegisterEverything/RegisterEverything.cpp
 +++ b/mlir/lib/CAPI/RegisterEverything/RegisterEverything.cpp
-@@ -16,10 +16,249 @@
+@@ -16,10 +16,247 @@
  #include "mlir/Target/LLVMIR/Dialect/All.h"
  #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
  #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -156,7 +156,6 @@ index c1c4a418b255..64c4bc9ac2c5 100644
 +void registerTestCfAssertPass();
 +void registerTestConstantFold();
 +void registerTestControlFlowSink();
-+void registerTestGpuSerializeToCubinPass();
 +void registerTestGpuSerializeToHsacoPass();
 +void registerTestDataLayoutPropagation();
 +void registerTestDataLayoutQuery();
@@ -276,7 +275,6 @@ index c1c4a418b255..64c4bc9ac2c5 100644
 +  mlir::test::registerTestControlFlowSink();
 +  mlir::test::registerTestDiagnosticsPass();
 +#if MLIR_CUDA_CONVERSIONS_ENABLED
-+  mlir::test::registerTestGpuSerializeToCubinPass();
 +  mlir::test::registerTestLowerToNVVM();
 +#endif
 +#if MLIR_ROCM_CONVERSIONS_ENABLED
