@@ -4,10 +4,9 @@ set -uxo pipefail
 # note that space before slash is important
 PATCHES="\
 add_td_to_mlirpythoncapi_headers \
-opaqueptrs \
 mscv \
-remove_openmp_dep_on_clang_and_export_async_symbols \
 register_test_pass \
+remove_openmp_dep_on_clang_and_export_async_symbols \
 tblgen \
 "
 
