@@ -38,7 +38,7 @@ HOST_CCACHE_DIR="/host${HOST_CCACHE_DIR:-/home/runner/work/mlir-wheels/mlir-whee
 if [ -d "$HOST_CCACHE_DIR" ]; then
   ls -l "$HOST_CCACHE_DIR"
   mkdir -p /output
-  cp -R $HOST_CCACHE_DIR /output/.ccache
+  mv $HOST_CCACHE_DIR /output/.ccache
   ls -la /output/.ccache
 fi
 

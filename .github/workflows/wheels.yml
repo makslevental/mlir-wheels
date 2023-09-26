@@ -189,17 +189,6 @@ jobs:
           
           popd
 
-      - name: Reset datetime ccache
-        working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-        shell: bash
-        run: |
-          
-          ccache -s
-          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          DATETIME=$(date +"%Y%m%d%H")
-          find $HOST_CCACHE_DIR -exec touch -a -m -t "$DATETIME""00" {} \;
-          ccache -s
-
       - name: Download cache from container ubuntu
         if: success() || failure()
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
@@ -211,6 +200,17 @@ jobs:
           rm -rf $HOST_CCACHE_DIR
           mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
           ls -la $HOST_CCACHE_DIR
+          ccache -s
+
+      - name: Reset datetime ccache
+        working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+        shell: bash
+        run: |
+          
+          ccache -s
+          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+          DATETIME=$(date +"%Y%m%d%H")
+          find $HOST_CCACHE_DIR -exec touch -a -m -t "$DATETIME""00" {} \;
           ccache -s
 
       # done
