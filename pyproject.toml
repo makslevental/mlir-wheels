@@ -7,7 +7,7 @@ requires = [
     "pybind11[global]>=2.10.4",
     "numpy",
     "dataclasses",
-    "mlir-native-tools",
+    "mlir-native-tools==17.0.0.2023083007+35ca6498",
 ]
 build-backend = "setuptools.build_meta"
 
