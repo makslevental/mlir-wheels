@@ -1,0 +1,47 @@
+diff --git a/mlir/include/mlir-c/IR.h b/mlir/include/mlir-c/IR.h
+index a6408317db69..cafe592a0370 100644
+--- a/mlir/include/mlir-c/IR.h
++++ b/mlir/include/mlir-c/IR.h
+@@ -618,6 +618,10 @@ MLIR_CAPI_EXPORTED bool
+ mlirOperationRemoveDiscardableAttributeByName(MlirOperation op,
+                                               MlirStringRef name);
+ 
++/// Set `pos`-th successor of the operation.
++MLIR_CAPI_EXPORTED void
++mlirOperationSetSuccessor(MlirOperation op, MlirBlock block, intptr_t pos);
++
+ /// Returns the number of attributes attached to the operation.
+ /// Deprecated, please use `mlirOperationGetNumInherentAttributes` or
+ /// `mlirOperationGetNumDiscardableAttributes`.
+diff --git a/mlir/lib/Bindings/Python/IRCore.cpp b/mlir/lib/Bindings/Python/IRCore.cpp
+index aad74f511e7e..8ab0910e1b8d 100644
+--- a/mlir/lib/Bindings/Python/IRCore.cpp
++++ b/mlir/lib/Bindings/Python/IRCore.cpp
+@@ -2924,7 +2924,10 @@ void mlir::python::populateIRCore(py::module &m) {
+                              &PyOperation::getCapsule)
+       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyOperation::createFromCapsule)
+       .def_property_readonly("operation", [](py::object self) { return self; })
+-      .def_property_readonly("opview", &PyOperation::createOpView);
++      .def_property_readonly("opview", &PyOperation::createOpView)
++      .def("set_successor", [](PyOperation &self, PyBlock block, int pos) {
++        mlirOperationSetSuccessor(self, block.get(), pos);
++      });
+ 
+   auto opViewClass =
+       py::class_<PyOpView, PyOperationBase>(m, "OpView", py::module_local())
+diff --git a/mlir/lib/CAPI/IR/IR.cpp b/mlir/lib/CAPI/IR/IR.cpp
+index 65b2b7466fb7..18de1cc00b47 100644
+--- a/mlir/lib/CAPI/IR/IR.cpp
++++ b/mlir/lib/CAPI/IR/IR.cpp
+@@ -637,6 +637,11 @@ bool mlirOperationRemoveDiscardableAttributeByName(MlirOperation op,
+   return !!unwrap(op)->removeDiscardableAttr(unwrap(name));
+ }
+ 
++void mlirOperationSetSuccessor(MlirOperation op, MlirBlock block,
++                               intptr_t pos) {
++  unwrap(op)->setSuccessor(unwrap(block), static_cast<unsigned>(pos));
++}
++
+ intptr_t mlirOperationGetNumAttributes(MlirOperation op) {
+   return static_cast<intptr_t>(unwrap(op)->getAttrs().size());
+ }

@@ -7,6 +7,7 @@ add_td_to_mlirpythoncapi_headers \
 mscv \
 register_test_pass \
 remove_openmp_dep_on_clang_and_export_async_symbols \
+set_successor \
 tblgen \
 "
 
