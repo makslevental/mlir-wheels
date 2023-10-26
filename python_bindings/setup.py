@@ -83,6 +83,10 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
+            # prevent symbol collision that leads to multiple pass registration and such
+            "-DCMAKE_VISIBILITY_INLINES_HIDDEN=ON",
+            "-DCMAKE_C_VISIBILITY_PRESET=hidden",
+            "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
         ]
         if platform.system() == "Windows":
             cmake_args += [

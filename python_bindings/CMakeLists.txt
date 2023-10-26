@@ -66,22 +66,17 @@ add_definitions(${LLVM_DEFINITIONS})
 
 mlir_configure_python_dev_packages()
 
-add_mlir_python_common_capi_library(
-  MLIRPythonCAPI
-  INSTALL_COMPONENT
-  MLIRPythonModules
-  INSTALL_DESTINATION
-  mlir/_mlir_libs
-  OUTPUT_DIRECTORY
-  "${MLIR_BINARY_DIR}/mlir/_mlir_libs"
-  RELATIVE_INSTALL_ROOT
-  "../../../.."
+add_mlir_python_common_capi_library(MLIRPythonCAPI
+  INSTALL_COMPONENT MLIRPythonModules
+  INSTALL_DESTINATION mlir/_mlir_libs
+  OUTPUT_DIRECTORY "${MLIR_BINARY_DIR}/mlir/_mlir_libs"
+  RELATIVE_INSTALL_ROOT "../../../.."
   DECLARED_HEADERS
-  MLIRPythonCAPI.HeaderSources
+    MLIRPythonCAPI.HeaderSources
   DECLARED_SOURCES
-  MLIRPythonSources
-  MLIRPythonExtension.RegisterEverything
-  ${_ADDL_TEST_SOURCES})
+    MLIRPythonSources
+    MLIRPythonExtension.RegisterEverything
+)
 
 # ##############################################################################
 # Custom targets.
@@ -98,15 +93,12 @@ endif()
 # The fully assembled package of modules. This must come last.
 # ##############################################################################
 
-add_mlir_python_modules(
-  MLIRPythonModules
-  ROOT_PREFIX
-  "${MLIR_BINARY_DIR}/mlir"
-  INSTALL_PREFIX
-  "mlir"
+add_mlir_python_modules(MLIRPythonModules
+  ROOT_PREFIX "${MLIR_BINARY_DIR}/mlir"
+  INSTALL_PREFIX "mlir"
   DECLARED_SOURCES
-  MLIRPythonSources
-  MLIRPythonExtension.RegisterEverything
-  ${_ADDL_TEST_SOURCES}
+    MLIRPythonSources
+    MLIRPythonExtension.RegisterEverything
   COMMON_CAPI_LINK_LIBS
-  MLIRPythonCAPI)
+    MLIRPythonCAPI
+)
