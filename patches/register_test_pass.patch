@@ -11,10 +11,10 @@ index 6af47b51d4c6..babe609eb740 100644
          ${ARGN}
      WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
 diff --git a/mlir/CMakeLists.txt b/mlir/CMakeLists.txt
-index fa4f6e76f985..973f0ee3596d 100644
+index 16ff95008973..a8a75aa747a6 100644
 --- a/mlir/CMakeLists.txt
 +++ b/mlir/CMakeLists.txt
-@@ -189,7 +189,8 @@ if (MLIR_INCLUDE_TESTS)
+@@ -200,7 +200,8 @@ if (MLIR_INCLUDE_TESTS)
    else()
      message(WARNING "gtest not found, unittests will not be available")
    endif()
@@ -94,10 +94,10 @@ index 8b9a39558a03..03d39bd8c6cb 100644
    MLIRBuiltinToLLVMIRTranslation
    MLIRCAPIIR
 diff --git a/mlir/lib/CAPI/RegisterEverything/RegisterEverything.cpp b/mlir/lib/CAPI/RegisterEverything/RegisterEverything.cpp
-index c1c4a418b255..64c4bc9ac2c5 100644
+index c1c4a418b255..5595bb075bab 100644
 --- a/mlir/lib/CAPI/RegisterEverything/RegisterEverything.cpp
 +++ b/mlir/lib/CAPI/RegisterEverything/RegisterEverything.cpp
-@@ -16,10 +16,247 @@
+@@ -16,10 +16,245 @@
  #include "mlir/Target/LLVMIR/Dialect/All.h"
  #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
  #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -120,7 +120,6 @@ index c1c4a418b255..64c4bc9ac2c5 100644
 +void registerRegionTestPasses();
 +void registerTestAffineDataCopyPass();
 +void registerTestAffineReifyValueBoundsPass();
-+void registerTestBytecodeCallbackPasses();
 +void registerTestDecomposeAffineOpPass();
 +void registerTestAffineLoopUnswitchingPass();
 +void registerTestAllReduceLoweringPass();
@@ -241,7 +240,6 @@ index c1c4a418b255..64c4bc9ac2c5 100644
 +  registerTestDecomposeAffineOpPass();
 +  registerTestAffineLoopUnswitchingPass();
 +  registerTestAllReduceLoweringPass();
-+  registerTestBytecodeCallbackPasses();
 +  registerTestFunc();
 +  registerTestGpuMemoryPromotionPass();
 +  registerTestLoopPermutationPass();
@@ -345,7 +343,7 @@ index c1c4a418b255..64c4bc9ac2c5 100644
  }
  
  void mlirRegisterAllLLVMTranslations(MlirContext context) {
-@@ -29,4 +268,7 @@ void mlirRegisterAllLLVMTranslations(MlirContext context) {
+@@ -29,4 +264,7 @@ void mlirRegisterAllLLVMTranslations(MlirContext context) {
    ctx.appendDialectRegistry(registry);
  }
  
@@ -355,7 +353,7 @@ index c1c4a418b255..64c4bc9ac2c5 100644
 +  mlir::registerAllPasses();
 +}
 diff --git a/mlir/test/lib/Analysis/CMakeLists.txt b/mlir/test/lib/Analysis/CMakeLists.txt
-index ea3abe05949c..67a879743b05 100644
+index d168888c1e71..0f97fada1907 100644
 --- a/mlir/test/lib/Analysis/CMakeLists.txt
 +++ b/mlir/test/lib/Analysis/CMakeLists.txt
 @@ -17,7 +17,7 @@ add_mlir_library(MLIRTestAnalysis
@@ -485,10 +483,10 @@ index 6adf893e44f0..90788832ca00 100644
    LINK_LIBS PUBLIC
    MLIRAffineDialect
 diff --git a/mlir/test/lib/Dialect/GPU/CMakeLists.txt b/mlir/test/lib/Dialect/GPU/CMakeLists.txt
-index ac96229e80a0..9b912076ad29 100644
+index 3f20e5a6ecfc..fdd330cefc86 100644
 --- a/mlir/test/lib/Dialect/GPU/CMakeLists.txt
 +++ b/mlir/test/lib/Dialect/GPU/CMakeLists.txt
-@@ -37,7 +37,7 @@ add_mlir_library(MLIRGPUTestPasses
+@@ -35,7 +35,7 @@ add_mlir_library(MLIRGPUTestPasses
    TestGpuRewrite.cpp
    TestLowerToNVVM.cpp
  
@@ -498,7 +496,7 @@ index ac96229e80a0..9b912076ad29 100644
    LINK_LIBS PUBLIC
    ${LIBS}
 diff --git a/mlir/test/lib/Dialect/LLVM/CMakeLists.txt b/mlir/test/lib/Dialect/LLVM/CMakeLists.txt
-index 8446cd8d282c..333f672d964f 100644
+index 734757ce79da..24183dc6c34e 100644
 --- a/mlir/test/lib/Dialect/LLVM/CMakeLists.txt
 +++ b/mlir/test/lib/Dialect/LLVM/CMakeLists.txt
 @@ -2,7 +2,7 @@
@@ -615,10 +613,10 @@ index f22b21d17329..1754be13e488 100644
    LINK_LIBS PUBLIC
    MLIRArithDialect
 diff --git a/mlir/test/lib/Dialect/Test/CMakeLists.txt b/mlir/test/lib/Dialect/Test/CMakeLists.txt
-index 8d26fd4e1c54..cf7254390bbf 100644
+index b82b1631eead..0e6751c6d57b 100644
 --- a/mlir/test/lib/Dialect/Test/CMakeLists.txt
 +++ b/mlir/test/lib/Dialect/Test/CMakeLists.txt
-@@ -52,7 +52,7 @@ add_mlir_library(MLIRTestDialect
+@@ -53,7 +53,7 @@ add_mlir_library(MLIRTestDialect
    TestOpsSyntax.cpp
    TestDialectInterfaces.cpp
  
@@ -680,7 +678,7 @@ index d8e6b24b0c26..b292156f89f1 100644
    LINK_LIBS PUBLIC
    MLIRAffineDialect
 diff --git a/mlir/test/lib/IR/CMakeLists.txt b/mlir/test/lib/IR/CMakeLists.txt
-index 1696a1465483..4d1d05a24799 100644
+index 69c63fd7e524..3a0f84d75da6 100644
 --- a/mlir/test/lib/IR/CMakeLists.txt
 +++ b/mlir/test/lib/IR/CMakeLists.txt
 @@ -24,7 +24,7 @@ add_mlir_library(MLIRTestIR
