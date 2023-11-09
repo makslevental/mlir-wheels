@@ -82,6 +82,9 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DPython3_EXECUTABLE={sys.executable}",
+            # Disables generation of "version soname" (i.e. libFoo.so.<version>), which
+            # causes pure duplication of various shlibs for Python wheels.
+            "-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             # prevent symbol collision that leads to multiple pass registration and such
             "-DCMAKE_VISIBILITY_INLINES_HIDDEN=ON",
@@ -180,34 +183,9 @@ class CMakeBuild(build_ext):
             check=True,
         )
 
-        shlibs = [
-            "mlir_async_runtime",
-            "mlir_c_runner_utils",
-            "mlir_float16_utils",
-            "mlir_runner_utils",
-        ]
-        if BUILD_CUDA:
-            shlibs += ["mlir_cuda_runtime"]
-        if BUILD_OPENMP:
-            shlibs += ["omp"]
-        if BUILD_VULKAN:
-            shlibs += ["vulkan-runtime-wrappers"]
-
-        mlir_libs_dir = install_dir / "mlir" / "_mlir_libs"
-        for shlib in shlibs:
-            shlib_name = f"{shlib}"
-            shlib_fps = glob.glob(
-                str(MLIR_INSTALL_ABS_PATH.absolute() / "lib" / ("*" + shlib_name + "*"))
-            )
-            assert len(shlib_fps), f"couldn't find shlib {shlib_name}"
-            for shlib_fp in shlib_fps:
-                dst_path = mlir_libs_dir / os.path.basename(shlib_fp)
-                shutil.copyfile(shlib_fp, dst_path, follow_symlinks=True)
-
 
 BUILD_CUDA = check_env("BUILD_CUDA")
 BUILD_VULKAN = check_env("BUILD_VULKAN")
-BUILD_OPENMP = check_env("BUILD_OPENMP")
 
 version = version("mlir")
 

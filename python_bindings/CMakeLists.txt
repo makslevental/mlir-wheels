@@ -102,3 +102,38 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
+
+set(_runtimes
+  mlir_async_runtime
+  mlir_c_runner_utils
+  mlir_float16_utils
+  mlir_runner_utils
+)
+
+if (TARGET mlir_rocm_runtime)
+  list(APPEND _runtimes mlir_rocm_runtime)
+endif()
+
+if (TARGET mlir_cuda_runtime)
+  list(APPEND _runtimes mlir_cuda_runtime)
+endif()
+
+if (TARGET omp)
+  list(APPEND _runtimes omp)
+endif()
+
+if (TARGET vulkan-runtime-wrappers)
+  list(APPEND _runtimes vulkan-runtime-wrappers)
+endif()
+
+foreach(r ${_runtimes})
+  add_custom_command(
+    TARGET MLIRPythonModules
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${r}> ${CMAKE_BINARY_DIR}/lib)
+endforeach()
+
+install(
+  IMPORTED_RUNTIME_ARTIFACTS ${_runtimes}
+  LIBRARY DESTINATION "mlir/_mlir_libs"
+)

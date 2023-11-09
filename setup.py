@@ -114,6 +114,9 @@ class CMakeBuild(build_ext):
             "-DMLIR_INCLUDE_TESTS=ON",
             # get rid of that annoying af git on the end of .17git
             "-DLLVM_VERSION_SUFFIX=",
+            # Disables generation of "version soname" (i.e. libFoo.so.<version>), which
+            # causes pure duplication of various shlibs for Python wheels.
+            "-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",

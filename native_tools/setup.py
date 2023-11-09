@@ -15,7 +15,7 @@ def get_exe_suffix():
     return suffix
 
 
-version = os.environ.get("MLIR_WHEEL_VERSION", "DEADBEEF")
+version = os.environ.get("MLIR_WHEEL_VERSION", "0.0.0+DEADBEEF")
 
 data_files = []
 for bin in [
