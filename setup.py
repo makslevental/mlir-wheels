@@ -18,6 +18,11 @@ class CMakeExtension(Extension):
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
 
 
+def is_cross():
+    CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
+    return CIBW_ARCHS != platform.machine()
+
+
 def get_cross_cmake_args():
     cmake_args = {}
 
@@ -37,7 +42,7 @@ def get_cross_cmake_args():
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "X86"
     else:
         raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
-    if CIBW_ARCHS != platform.machine():
+    if is_cross():
         cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
 
     if platform.system() == "Darwin":
@@ -161,12 +166,17 @@ class CMakeBuild(build_ext):
             cmake_args += [f"-DVulkan_LIBRARY={vulkan_library}"]
 
         if BUILD_OPENMP:
-            cmake_args += [
-                "-DENABLE_CHECK_TARGETS=OFF",
+            omp_flags = [
+                "-DOPENMP_STANDALONE_BUILD=ON",
                 "-DLIBOMP_OMPD_GDB_SUPPORT=OFF",
                 "-DLIBOMP_USE_QUAD_PRECISION=False",
                 "-DOPENMP_ENABLE_LIBOMPTARGET=OFF",
             ]
+            cmake_args += omp_flags
+            if is_cross():
+                cmake_args.append(
+                    "-DCROSS_TOOLCHAIN_FLAGS_NATIVE='{}'".format(" ".join(omp_flags))
+                )
             LLVM_ENABLE_PROJECTS += ";openmp"
 
         cmake_args += [f"-DLLVM_ENABLE_PROJECTS={LLVM_ENABLE_PROJECTS}"]
