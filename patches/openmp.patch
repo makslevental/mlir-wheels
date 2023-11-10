@@ -1,0 +1,13 @@
+diff --git a/openmp/runtime/src/CMakeLists.txt b/openmp/runtime/src/CMakeLists.txt
+index 8b2445ac58bf..c3de2adf02fc 100644
+--- a/openmp/runtime/src/CMakeLists.txt
++++ b/openmp/runtime/src/CMakeLists.txt
+@@ -356,7 +356,7 @@ add_dependencies(libomp-micro-tests libomp-test-deps)
+ 
+ # `omp` needs to be exported if in-tree build.
+ set(export_to_llvmexports)
+-if (NOT OPENMP_STANDALONE_BUILD)
++if (1)
+   get_target_export_arg(omp LLVM export_to_llvmexports)
+   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
+ endif()

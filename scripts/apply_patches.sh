@@ -3,11 +3,10 @@ set -uxo pipefail
 
 # note that space before slash is important
 PATCHES="\
-add_td_to_mlirpythoncapi_headers \
 mscv \
+openmp \
 register_test_pass \
-remove_openmp_dep_on_clang_and_export_async_symbols \
-tblgen \
+export_async_symbols \
 "
 
 if [[ x"${APPLY_PATCHES:-true}" == x"true" ]]; then
