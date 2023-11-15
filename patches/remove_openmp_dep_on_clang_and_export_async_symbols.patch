@@ -1,8 +1,8 @@
 diff --git a/mlir/lib/ExecutionEngine/CMakeLists.txt b/mlir/lib/ExecutionEngine/CMakeLists.txt
-index 39cc9c060db7..2bd0a6c55cdd 100644
+index fe139661f2bb..0b93a3e264ae 100644
 --- a/mlir/lib/ExecutionEngine/CMakeLists.txt
 +++ b/mlir/lib/ExecutionEngine/CMakeLists.txt
-@@ -167,13 +167,13 @@ if(LLVM_ENABLE_PIC)
+@@ -169,13 +169,13 @@ if(LLVM_ENABLE_PIC)
      LINK_LIBS PUBLIC
      ${LLVM_PTHREAD_LIB}
    )
@@ -17,12 +17,12 @@ index 39cc9c060db7..2bd0a6c55cdd 100644
 +#    target_link_options(mlir_async_runtime PRIVATE "-Wl,-exclude-libs,ALL")
    endif()
  
-   if(MLIR_ENABLE_CUDA_RUNNER)
+   add_mlir_library(mlir_arm_sme_abi_stubs
 diff --git a/openmp/CMakeLists.txt b/openmp/CMakeLists.txt
-index c1efcaf80b54..117d0b3cf991 100644
+index 13e65bf70b5b..78c5e5cd599d 100644
 --- a/openmp/CMakeLists.txt
 +++ b/openmp/CMakeLists.txt
-@@ -132,4 +132,4 @@ add_subdirectory(libompd)
+@@ -148,4 +148,4 @@ add_subdirectory(libompd)
  add_subdirectory(docs)
  
  # Now that we have seen all testsuites, create the check-openmp target.
