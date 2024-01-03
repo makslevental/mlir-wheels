@@ -204,6 +204,6 @@ setup(
     ext_modules=[CMakeExtension("mlir", sourcedir=".")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    python_requires=">=3.10",
+    python_requires=">=3.8",
     download_url=llvm_url,
 )
