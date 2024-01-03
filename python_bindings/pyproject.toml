@@ -1,7 +1,6 @@
 [tool.cibuildwheel]
 environment = { PIP_FIND_LINKS = "wheelhouse https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest", PIP_NO_BUILD_ISOLATION = "false" }
 build-verbosity = 3
-build = "cp310-* cp311-* cp312-*"
 before-all = [
     "rm -rf {project}/build",
     "rm -rf *egg*",
@@ -10,6 +9,7 @@ manylinux-aarch64-image = "manylinux_2_28"
 manylinux-x86_64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.linux]
+build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
 skip = ["*-manylinux_i686", "*-musllinux*"]
 environment-pass = [
     "BUILD_CUDA",
@@ -38,6 +38,7 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.macos]
+build = "cp310-* cp311-* cp312-*"
 before-build = [
     "{project}/scripts/install_vulkan.sh",
     "pip install -r requirements.txt",
@@ -48,6 +49,7 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.windows]
+build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
 before-build = [
     "bash {project}\\scripts\\install_vulkan.sh",
     "pip install delvewheel",

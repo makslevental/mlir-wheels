@@ -134,6 +134,14 @@ jobs:
         include:
           - OS: ubuntu-20.04
             ARCH: aarch64
+            PY_VERSION: "cp38"
+
+          - OS: ubuntu-20.04
+            ARCH: aarch64
+            PY_VERSION: "cp39"
+
+          - OS: ubuntu-20.04
+            ARCH: aarch64
             PY_VERSION: "cp310"
 
           - OS: ubuntu-20.04
