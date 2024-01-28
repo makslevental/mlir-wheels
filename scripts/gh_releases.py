@@ -24,8 +24,6 @@ for _ in range(100):
     release = repo.get_release(113028511)
     assets = release.get_assets()
     for ass in assets:
-        if "35ca6498" in ass.name:
-            continue
         if ass.created_at.date() < twomonthsago:
             print(ass.name)
             assert ass.delete_asset()
@@ -35,8 +33,6 @@ for _ in range(100):
     release = repo.get_release(111725799)
     assets = release.get_assets()
     for ass in assets:
-        if "35ca6498" in ass.name:
-            continue
         if ass.created_at.date() < twomonthsago:
             print(ass.name)
             assert ass.delete_asset()
