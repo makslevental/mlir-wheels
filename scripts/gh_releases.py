@@ -8,7 +8,7 @@ import datetime
 from github import Auth
 
 # using an access token
-auth = Auth.Token(os.environ["GITHUB_API_TOKEN"])
+auth = Auth.Token(os.environ["GITHUB_TOKEN"])
 
 twomonthsago = datetime.date.today() - datetime.timedelta(days=30)
 
