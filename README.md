@@ -22,7 +22,6 @@ site-packages/mlir
 ├── bin
 ├── include
 ├── lib
-├── python_packages
 ├── share
 └── src
 ```
