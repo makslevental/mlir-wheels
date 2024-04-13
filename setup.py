@@ -87,6 +87,7 @@ class CMakeBuild(build_ext):
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
 
         cmake_args = [
+            f"-B{build_temp}",
             f"-G {cmake_generator}",
             "-DBUILD_SHARED_LIBS=OFF",
             "-DLLVM_BUILD_BENCHMARKS=OFF",
@@ -216,10 +217,6 @@ class CMakeBuild(build_ext):
         else:
             build_args += [f"-j{os.environ.get('PARALLEL_LEVEL')}"]
 
-        build_temp = Path(self.build_temp) / ext.name
-        if not build_temp.exists():
-            build_temp.mkdir(parents=True)
-
         print("ENV", pprint(os.environ), file=sys.stderr)
         print("CMAKE_ARGS", cmake_args, file=sys.stderr)
 
@@ -270,6 +267,20 @@ else:
     version += commit_hash
 
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
+
+build_temp = Path.cwd() / "build" / "temp"
+if not build_temp.exists():
+    build_temp.mkdir(parents=True)
+
+ext = ".exe" if platform.system() == "Windows" else ""
+exes = [
+    "mlir-cpu-runner",
+    "mlir-opt",
+    "mlir-translate",
+]
+data_files = [("bin", [str(build_temp / "bin" / x) + ext for x in exes])]
+
+
 setup(
     name="mlir",
     version=version,
@@ -282,4 +293,5 @@ setup(
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     download_url=llvm_url,
+    data_files=data_files,
 )
