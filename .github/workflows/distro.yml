@@ -33,6 +33,16 @@ on:
         type: string
         required: false
         default: 'true'
+      RUN_TESTS:
+        description: 'whether to run llvm tests after build'
+        type: string
+        required: false
+        default: 'false'
+      RELEASE:
+        description: 'whether to publish/release artifacts'
+        type: boolean
+        required: false
+        default: true
 
   pull_request:
   release:
@@ -173,6 +183,7 @@ jobs:
       run: |
         
         APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }} \
+        RUN_TESTS=${{ inputs.RUN_TESTS == '' && 'true' || inputs.RUN_TESTS }} \
         BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
         BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
         BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
@@ -310,7 +321,7 @@ jobs:
         name: build_artifact
 
   upload_distro_wheels:
-    if: github.event.schedule != '0 */4 * * *'
+    if: github.event.schedule != '0 */4 * * *' && inputs.RELEASE
 
     needs: build
 
@@ -355,7 +366,7 @@ jobs:
           makeLatest: true
 
   call-build-python-bindings:
-    if: github.event.schedule != '0 */4 * * *'
+    if: github.event.schedule != '0 */4 * * *' && inputs.RELEASE
 
     needs: [build, upload_distro_wheels, get_llvm_project_commit]
 
