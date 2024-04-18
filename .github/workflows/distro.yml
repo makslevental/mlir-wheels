@@ -42,6 +42,8 @@ on:
   schedule:
     # At minute 0 past hour 1. (see https://crontab.guru)
     - cron: '00 01 * * *'
+      # At minute 0 past every 4th hour. (see https://crontab.guru)
+    - cron: '0 */4 * * *'
 
 jobs:
 
@@ -308,6 +310,7 @@ jobs:
         name: build_artifact
 
   upload_distro_wheels:
+    if: github.event.schedule != '0 */4 * * *'
 
     needs: build
 
@@ -352,6 +355,7 @@ jobs:
           makeLatest: true
 
   call-build-python-bindings:
+    if: github.event.schedule != '0 */4 * * *'
 
     needs: [build, upload_distro_wheels, get_llvm_project_commit]
 
