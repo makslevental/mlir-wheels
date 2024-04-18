@@ -88,9 +88,9 @@ class CMakeBuild(build_ext):
 
         RUN_TESTS = 1 if check_env("RUN_TESTS") else 0
         # make windows happy
-        PYTHON_EXECUTABLE = Path(sys.executable)
+        PYTHON_EXECUTABLE = str(Path(sys.executable))
         if platform.system() == "Windows":
-            PYTHON_EXECUTABLE = PureWindowsPath(PYTHON_EXECUTABLE)
+            PYTHON_EXECUTABLE = PYTHON_EXECUTABLE.replace("\\", "\\\\")
 
         cmake_args = [
             f"-B{build_temp}",
