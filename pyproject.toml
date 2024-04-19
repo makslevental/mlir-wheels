@@ -8,6 +8,7 @@ requires = [
     "numpy",
     "dataclasses",
     "mlir-native-tools",
+    "PyYAML",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -42,6 +43,8 @@ environment-pass = [
     "PARALLEL_LEVEL",
     "PIP_FIND_LINKS",
     "PIP_NO_BUILD_ISOLATION",
+    "RUN_TESTS",
+    "MLIR_LIT_PYTHONPATH",
 ]
 repair-wheel-command = [
     "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1 --exclude libomp.so --exclude libompd.so"

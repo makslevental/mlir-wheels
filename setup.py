@@ -5,7 +5,7 @@ import platform
 import re
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from pprint import pprint
 
 from setuptools import Extension, setup
@@ -86,6 +86,12 @@ class CMakeBuild(build_ext):
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
 
+        RUN_TESTS = 1 if check_env("RUN_TESTS") else 0
+        # make windows happy
+        PYTHON_EXECUTABLE = str(Path(sys.executable))
+        if platform.system() == "Windows":
+            PYTHON_EXECUTABLE = PYTHON_EXECUTABLE.replace("\\", "\\\\")
+
         cmake_args = [
             f"-B{build_temp}",
             f"-G {cmake_generator}",
@@ -93,7 +99,7 @@ class CMakeBuild(build_ext):
             "-DLLVM_BUILD_BENCHMARKS=OFF",
             "-DLLVM_BUILD_EXAMPLES=OFF",
             "-DLLVM_BUILD_RUNTIMES=OFF",
-            "-DLLVM_BUILD_TESTS=OFF",
+            f"-DLLVM_BUILD_TESTS={RUN_TESTS}",
             "-DLLVM_BUILD_TOOLS=ON",
             "-DLLVM_BUILD_UTILS=ON",
             "-DLLVM_CCACHE_BUILD=ON",
@@ -103,7 +109,7 @@ class CMakeBuild(build_ext):
             "-DLLVM_INCLUDE_BENCHMARKS=OFF",
             "-DLLVM_INCLUDE_EXAMPLES=OFF",
             "-DLLVM_INCLUDE_RUNTIMES=OFF",
-            "-DLLVM_INCLUDE_TESTS=OFF",
+            f"-DLLVM_INCLUDE_TESTS={RUN_TESTS}",
             "-DLLVM_INCLUDE_TOOLS=ON",
             "-DLLVM_INCLUDE_UTILS=ON",
             "-DLLVM_INSTALL_UTILS=ON",
@@ -112,6 +118,8 @@ class CMakeBuild(build_ext):
             "-DMLIR_ENABLE_BINDINGS_PYTHON=ON",
             "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
             "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
+            f"MLIR_INCLUDE_INTEGRATION_TESTS={RUN_TESTS}",
+            f"MLIR_INCLUDE_TESTS={RUN_TESTS}",
             # get rid of that annoying af git on the end of .17git
             "-DLLVM_VERSION_SUFFIX=",
             # Disables generation of "version soname" (i.e. libFoo.so.<version>), which
@@ -119,7 +127,7 @@ class CMakeBuild(build_ext):
             "-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
-            f"-DPython3_EXECUTABLE={sys.executable}",
+            f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             # prevent symbol collision that leads to multiple pass registration and such
             "-DCMAKE_VISIBILITY_INLINES_HIDDEN=ON",
@@ -228,6 +236,17 @@ class CMakeBuild(build_ext):
             cwd=build_temp,
             check=True,
         )
+        if RUN_TESTS:
+            env = os.environ.copy()
+            # PYTHONPATH needs to be set to find build deps like numpy
+            # https://github.com/llvm/llvm-project/pull/89296
+            env["MLIR_LIT_PYTHONPATH"] = os.pathsep.join(sys.path)
+            subprocess.run(
+                ["cmake", "--build", ".", "--target", "check-mlir", *build_args],
+                cwd=build_temp,
+                env=env,
+                check=True,
+            )
         shutil.rmtree(install_dir / "python_packages", ignore_errors=True)
 
 
@@ -272,13 +291,13 @@ build_temp = Path.cwd() / "build" / "temp"
 if not build_temp.exists():
     build_temp.mkdir(parents=True)
 
-ext = ".exe" if platform.system() == "Windows" else ""
+EXE_EXT = ".exe" if platform.system() == "Windows" else ""
 exes = [
     "mlir-cpu-runner",
     "mlir-opt",
     "mlir-translate",
 ]
-data_files = [("bin", [str(build_temp / "bin" / x) + ext for x in exes])]
+data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
 
 
 setup(
