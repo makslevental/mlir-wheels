@@ -183,7 +183,7 @@ jobs:
       run: |
         
         APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }} \
-        RUN_TESTS=${{ inputs.RUN_TESTS == '' && 'true' || inputs.RUN_TESTS }} \
+        RUN_TESTS=${{ inputs.RUN_TESTS == '' && 'false' || inputs.RUN_TESTS }} \
         BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
         BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
         BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \

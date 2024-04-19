@@ -239,7 +239,8 @@ class CMakeBuild(build_ext):
         if RUN_TESTS:
             env = os.environ.copy()
             # PYTHONPATH needs to be set to find build deps like numpy
-            env["PYTHONPATH"] = os.pathsep.join(sys.path)
+            # https://github.com/llvm/llvm-project/pull/89296
+            env["MLIR_LIT_PYTHONPATH"] = os.pathsep.join(sys.path)
             subprocess.run(
                 ["cmake", "--build", ".", "--target", "check-mlir", *build_args],
                 cwd=build_temp,

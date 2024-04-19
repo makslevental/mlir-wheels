@@ -25,8 +25,6 @@ before-build = [
 #    "{project}/scripts/install_cuda.sh",
     "{project}/scripts/install_vulkan.sh",
     "{project}/scripts/apply_patches.sh",
-    # until https://github.com/llvm/llvm-project/pull/89296 lands
-    "pip install -r llvm-project/mlir/python/requirements.txt"
 ]
 before-test = "ccache --show-stats"
 environment-pass = [
@@ -45,6 +43,7 @@ environment-pass = [
     "PIP_FIND_LINKS",
     "PIP_NO_BUILD_ISOLATION",
     "RUN_TESTS",
+    "MLIR_LIT_PYTHONPATH",
 ]
 repair-wheel-command = [
     "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1 --exclude libomp.so --exclude libompd.so"
@@ -55,7 +54,6 @@ environment = { PATH = "/usr/local/opt/ccache/libexec:$PATH", PIP_FIND_LINKS = "
 before-build = [
     "{project}/scripts/install_vulkan.sh",
     "{project}/scripts/apply_patches.sh",
-    "pip install -r llvm-project/mlir/python/requirements.txt",
 ]
 repair-wheel-command = [
     "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} --ignore-missing-dependencies"
@@ -65,7 +63,6 @@ repair-wheel-command = [
 environment = { PIP_FIND_LINKS = "https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" }
 before-build = [
     "pip install delvewheel",
-    "pip install -r llvm-project\\mlir\\python\\requirements.txt",
     "bash {project}\\scripts\\install_vulkan.sh",
     "bash {project}\\scripts\\apply_patches.sh",
 ]
