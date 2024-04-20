@@ -2,7 +2,7 @@
 set -xe
 
 if [[ x"$BUILD_VULKAN" == x"true" ]]; then
-  if [ x"$MATRIX_OS" == x"macos-11" ]; then
+  if [ x"$MATRIX_OS" == x"macos-12" ]; then
     if [ ! -f vulkansdk-macos-1.3.239.0.dmg ]; then
       wget -q https://sdk.lunarg.com/sdk/download/1.3.239.0/mac/vulkansdk-macos-1.3.239.0.dmg
       sudo hdiutil attach vulkansdk-macos-1.3.239.0.dmg

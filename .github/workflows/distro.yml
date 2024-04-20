@@ -120,17 +120,17 @@ jobs:
           - OS: windows-2019
             ARCH: AMD64
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: x86_64
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: arm64
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: arm64
             BUILD_VULKAN: true
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: arm64
             BUILD_OPENMP: true
 
@@ -263,7 +263,7 @@ jobs:
         find $HOST_CCACHE_DIR -exec touch -a -m -t "${{ needs.get_llvm_project_commit.outputs.DATETIME }}00" {} \;
 
     - name: rename non-windows
-      if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-11' }}
+      if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-12' }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
@@ -297,8 +297,8 @@ jobs:
         
         if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ]; then
           PLAT="linux"
-        elif [ x"${{ matrix.OS }}" == x"macos-11" ]; then
-          PLAT="macosx_11_0"
+        elif [ x"${{ matrix.OS }}" == x"macos-12" ]; then
+          PLAT="macosx_12_0"
         elif [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
           PLAT="win"
         fi

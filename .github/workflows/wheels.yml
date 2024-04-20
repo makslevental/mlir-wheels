@@ -45,17 +45,17 @@ jobs:
           - OS: windows-2019
             ARCH: AMD64
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: x86_64
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: arm64
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: arm64
             BUILD_VULKAN: true
 
-          - OS: macos-11
+          - OS: macos-12
             ARCH: arm64
             BUILD_OPENMP: true
 
