@@ -46,8 +46,8 @@ What's the point of distributing a primarily binary distribution as a python whe
 I'm abusing the hell out of [PEP 440](https://peps.python.org/pep-0440/) compatible version strings with things like this:
 
 ```shell
-mlir-17.0.0+4a63264d-cp311-cp311-macosx_11_0_arm64.whl
-mlir-17.0.0+4a63264d.vulkan.openmp-cp311-cp311-macosx_11_0_arm64.whl
+mlir-17.0.0+4a63264d-cp311-cp311-macosx_12_0_arm64.whl
+mlir-17.0.0+4a63264d.vulkan.openmp-cp311-cp311-macosx_12_0_arm64.whl
 mlir-17.0.0+f3059e22.cuda.vulkan.openmp-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 ```
 
