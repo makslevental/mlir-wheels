@@ -38,11 +38,6 @@ on:
         type: string
         required: false
         default: 'false'
-      RELEASE:
-        description: 'whether to publish/release artifacts'
-        type: boolean
-        required: false
-        default: true
 
   pull_request:
   release:
@@ -321,7 +316,7 @@ jobs:
         name: build_artifact
 
   upload_distro_wheels:
-    if: github.event.schedule != '0 */4 * * *' && inputs.RELEASE
+    if: github.event.schedule != '0 */4 * * *'
 
     needs: build
 
@@ -366,7 +361,7 @@ jobs:
           makeLatest: true
 
   call-build-python-bindings:
-    if: github.event.schedule != '0 */4 * * *' && inputs.RELEASE
+    if: github.event.schedule != '0 */4 * * *'
 
     needs: [build, upload_distro_wheels, get_llvm_project_commit]
 
