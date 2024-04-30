@@ -42,16 +42,16 @@ runs:
         detached: ${{ inputs.DEBUG_DETACHED }}
 
     - uses: ilammy/msvc-dev-cmd@v1.4.1
-      if: ${{ inputs.MATRIX_OS == 'windows-2019' }}
+      if: contains(inputs.MATRIX_OS, 'windows')
 
     - name: Set up Visual Studio shell
-      if: ${{ inputs.MATRIX_OS == 'windows-2019' }}
+      if: contains(inputs.MATRIX_OS, 'windows')
       uses: egor-tensin/vs-shell@v2
       with:
         arch: x64
 
     - name: MS Build
-      if: ${{ inputs.MATRIX_OS == 'windows-2019' }}
+      if: contains(inputs.MATRIX_OS, 'windows')
       uses: microsoft/setup-msbuild@v1.1
 
     - name: Free disk space
@@ -74,7 +74,7 @@ runs:
 
     - name: Install cross-compilation toolchain
       shell: bash
-      if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' && inputs.MATRIX_ARCH == 'aarch64' }}
+      if: contains(inputs.MATRIX_OS, 'ubuntu') && inputs.MATRIX_ARCH == 'aarch64'
       run: |
         
         sudo apt-get update
@@ -86,22 +86,22 @@ runs:
       run: pip install cibuildwheel wheel
 
     - name: install rename
-      if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' || inputs.MATRIX_OS == 'macos-12' }}
+      if: contains(inputs.MATRIX_OS, 'ubuntu') || contains(inputs.MATRIX_OS, 'macos')
       shell: bash
       run: |
         
-        if [ x"${{ inputs.MATRIX_OS }}" == x"macos-12" ]; then
+        if [[ ${{ inputs.MATRIX_OS }} == *"macos"* ]]; then
           brew install rename
         else
           sudo apt-get install -y rename
         fi
 
     - run: echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-      if: ${{ inputs.MATRIX_OS == 'windows-2019' }}
+      if: contains(inputs.MATRIX_OS, 'windows')
       shell: pwsh
 
     - run: echo "TEMP=/tmp" >> $GITHUB_ENV
-      if: ${{ inputs.MATRIX_OS == 'ubuntu-20.04' || inputs.MATRIX_OS == 'macos-12' }}
+      if: contains(inputs.MATRIX_OS, 'ubuntu') || contains(inputs.MATRIX_OS, 'macos')
       shell: bash
 
     - name: Set workspace root
@@ -110,7 +110,7 @@ runs:
       working-directory: ${{ env.TEMP }}
       run: |
         
-        if [ x"${{ inputs.MATRIX_OS }}" == x"windows-2019" ]; then
+        if [[ ${{ inputs.MATRIX_OS }} == *"windows"* ]]; then
           WORKSPACE_ROOT="/C/a"
         else
           WORKSPACE_ROOT=$GITHUB_WORKSPACE
@@ -124,7 +124,7 @@ runs:
         git clone -b ${{ github.head_ref || github.ref_name }} https://github.com/${{ github.repository }}.git "$WORKSPACE_ROOT"
         ls "$WORKSPACE_ROOT"
         
-        if [ x"${{ inputs.MATRIX_OS }}" == x"windows-2019" ]; then
+        if [[ ${{ inputs.MATRIX_OS }} == *"windows"* ]]; then
           WORKSPACE_ROOT="C:\a"
         fi
         

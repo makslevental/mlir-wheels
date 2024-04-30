@@ -168,10 +168,9 @@ jobs:
         LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
         mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
 
-    # build
-
     - name: cibuildwheel
-      if: ${{ matrix.OS != 'ubuntu-20.04' || matrix.ARCH != 'aarch64' }}
+      # you need the parens here because of the != and something about yaml???
+      if: (!contains(matrix.OS, 'ubuntu') || matrix.ARCH != 'aarch64')
       shell: bash
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
@@ -191,7 +190,7 @@ jobs:
         cibuildwheel --output-dir wheelhouse
 
     - name: build aarch ubuntu wheel
-      if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
+      if: contains(matrix.OS, 'ubuntu') && contains(matrix.ARCH, 'aarch64')
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
@@ -211,31 +210,8 @@ jobs:
         PIP_FIND_LINKS="https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" \
         pip wheel . -v -w wheelhouse
 
-    - name: Clean llvm-project
-      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      shell: bash
-      run: |
-        
-        rm -rf llvm-project
-        rm -rf build
-
-    - name: Docker prune
-      if: contains(inputs.MATRIX_OS, 'ubuntu')
-      shell: bash
-      run: |
-        docker system prune -a -f
-
-    - name: Get wheel version
-      id: get_wheel_version
-      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      shell: bash
-      run: |
-        pip install pkginfo
-        WHL=$(ls wheelhouse/mlir-*whl)
-        echo "MLIR_WHEEL_VERSION=$(python -c "import pkginfo; w = pkginfo.Wheel('$WHL'); print(w.version.split('+')[0] + '+' + w.version.split('+')[1].rsplit('.', 1)[-1])")" | tee -a $GITHUB_OUTPUT
-
     - name: Download cache from container ubuntu
-      if: (matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'x86_64') && (success() || failure())
+      if: contains(matrix.OS, 'ubuntu') && contains(matrix.ARCH, 'x86_64') && (success() || failure())
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
@@ -255,9 +231,32 @@ jobs:
         ccache --print-stats
         HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         find $HOST_CCACHE_DIR -exec touch -a -m -t "${{ needs.get_llvm_project_commit.outputs.DATETIME }}00" {} \;
+        
+    - name: Clean llvm-project
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      shell: bash
+      run: |
+        
+        rm -rf llvm-project
+        rm -rf build
+
+    - name: Docker prune
+      if: contains(matrix.OS, 'ubuntu')
+      shell: bash
+      run: |
+        docker system prune -a -f
+
+    - name: Get wheel version
+      id: get_wheel_version
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      shell: bash
+      run: |
+        pip install pkginfo
+        WHL=$(ls wheelhouse/mlir-*whl)
+        echo "MLIR_WHEEL_VERSION=$(python -c "import pkginfo; w = pkginfo.Wheel('$WHL'); print(w.version.split('+')[0] + '+' + w.version.split('+')[1].rsplit('.', 1)[-1])")" | tee -a $GITHUB_OUTPUT
 
     - name: rename non-windows
-      if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-12' }}
+      if: contains(matrix.OS, 'ubuntu') || contains(matrix.OS, 'macos')
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
@@ -265,12 +264,12 @@ jobs:
         rename 's/cp310-cp310/py3-none/' wheelhouse/mlir-*whl
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
         
-        if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ] && [ x"${{ matrix.ARCH }}" == x"aarch64" ]; then
+        if [[ ${{ matrix.OS }} == *"ubuntu"* ]] && [ x"${{ matrix.ARCH }}" == x"aarch64" ]; then
           rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
         fi
 
     - name: rename windows
-      if: ${{ matrix.OS == 'windows-2019' }}
+      if: contains(matrix.OS, 'windows')
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp310-cp310', 'py3-none' }
@@ -283,17 +282,17 @@ jobs:
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
-          if [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
+          if [[ ${{ matrix.OS }} == *"windows"* ]]; then
             TOOL="$TOOL.exe"
           fi
           unzip -j wheelhouse/mlir-*whl "mlir/bin/$TOOL" -d native_tools/
         done
         
-        if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ]; then
+        if [[ ${{ matrix.OS }} == *"ubuntu"* ]]; then
           PLAT="linux"
-        elif [ x"${{ matrix.OS }}" == x"macos-12" ]; then
+        elif [[ ${{ matrix.OS }} == *"macos"* ]]; then
           PLAT="macosx_12_0"
-        elif [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
+        elif [[ ${{ matrix.OS }} == *"windows"* ]]; then
           PLAT="win"
         fi
         
