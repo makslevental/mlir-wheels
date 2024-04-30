@@ -101,7 +101,7 @@ jobs:
           popd
 
       - name: Download cache from container ubuntu
-        if: matrix.OS == 'ubuntu-20.04' && (success() || failure())
+        if: contains(matrix.OS, 'ubuntu') && (success() || failure())
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         shell: bash
         run: |
@@ -171,7 +171,7 @@ jobs:
           MATRIX_ARCH: ${{ matrix.ARCH }}
 
       - name: Set up QEMU
-        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
+        if: contains(matrix.OS, 'ubuntu') && contains(matrix.ARCH, 'aarch64')
         uses: docker/setup-qemu-action@v2
         with:
           platforms: ${{ matrix.ARCH }}
