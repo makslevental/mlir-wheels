@@ -10,35 +10,68 @@ inputs:
   EXTRA_KEY:
     description: ''
     required: false
+  WORKSPACE_ROOT:
+    description: 'workspace root to place ccache cache'
+    required: true
 
 outputs:
-  HOST_CCACHE_DIR:
+  ORIG_HOST_CCACHE_DIR:
     description: ''
-    value: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
+    value: ${{ steps.configure_ccache_dir_on_host.outputs.ORIG_HOST_CCACHE_DIR }}
 
 description: ''
 
 runs:
   using: "composite"
   steps:
+    - name: CWD to workspace_root
+      shell: bash
+      run: |
+        
+        cd "${{ inputs.WORKSPACE_ROOT }}"
+    
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.12
       with:
         key: ${{ inputs.MATRIX_OS }}-${{ inputs.MATRIX_ARCH }}-${{ inputs.EXTRA_KEY }}
         max-size: "1G"
         verbose: 2
+        variant: ccache
 
-    - name: Configure ccache dir on host ubuntu
-      if: contains(inputs.MATRIX_OS, 'ubuntu')
+    - name: Configure ccache dir on host
+      working-directory: ${{ inputs.WORKSPACE_ROOT }}
       shell: bash
       id: configure_ccache_dir_on_host
       run: |
         
-        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-        mkdir -p $HOST_CCACHE_DIR
-        echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
-
+        shopt -s dotglob
+        
+        WORKSPACE_ROOT="${{ inputs.WORKSPACE_ROOT }}"
+        if [[ ${{ inputs.MATRIX_OS }} == *"windows"* ]]; then
+          WORKSPACE_ROOT=$(cygpath -u $WORKSPACE_ROOT)
+        fi
+        
+        # ccache-action sets this to path.join(ghWorkSpace, '.ccache')
+        # https://github.com/hendrikmuhs/ccache-action/blob/c92f40bee50034e84c763e33b317c77adaa81c92/src/restore.ts#L53C54-L53C87
+        ORIG_HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+        if [[ ${{ inputs.MATRIX_OS }} == *"windows"* ]]; then
+          BASH_ORIG_HOST_CCACHE_DIR=$(cygpath -u $ORIG_HOST_CCACHE_DIR)
+        fi
+        echo "ORIG_HOST_CCACHE_DIR=$(dirname $BASH_ORIG_HOST_CCACHE_DIR)" | tee -a $GITHUB_OUTPUT
+        HOST_CCACHE_DIR="$WORKSPACE_ROOT/.ccache"
+        echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR"
+        
+        if [[ x"$ORIG_HOST_CCACHE_DIR" != x"$HOST_CCACHE_DIR" ]]; then
+          mv $ORIG_HOST_CCACHE_DIR "$WORKSPACE_ROOT/"
+        fi
+        
+        if [[ ${{ inputs.MATRIX_OS }} == *"windows"* ]]; then
+          HOST_CCACHE_DIR=$(cygpath -w $HOST_CCACHE_DIR)
+        fi
+        ccache --set-config=cache_dir="$HOST_CCACHE_DIR"
+        
     - name: Configure ccache
+      working-directory: ${{ inputs.WORKSPACE_ROOT }}
       if: contains(inputs.MATRIX_OS, 'ubuntu') || contains(inputs.MATRIX_OS, 'macos')
       shell: bash
       run: |
@@ -50,8 +83,17 @@ runs:
         fi
 
     - name: Configure ccache
+      working-directory: ${{ inputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
+        
+        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
+        if [[ ${{ inputs.MATRIX_OS }} == *"windows"* ]]; then
+          HOST_CCACHE_DIR=$(cygpath -u $HOST_CCACHE_DIR)
+        fi
+        ls -lah $HOST_CCACHE_DIR
+
+        ccache -p
         ccache -z
         # See https://github.com/hendrikmuhs/ccache-action/issues/146
         ccache --set-config=compiler_check=content
