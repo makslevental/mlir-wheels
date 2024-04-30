@@ -134,10 +134,9 @@ jobs:
     - name: Checkout actions
       uses: actions/checkout@v3
       with:
-        sparse-checkout: |
-          .github/actions
+        sparse-checkout: actions
 
-    - uses: ./.github/actions/setup_base
+    - uses: ./actions/setup_base
       id: setup_base
       with:
         # optional
@@ -149,7 +148,7 @@ jobs:
         MATRIX_OS: ${{ matrix.OS }}
         MATRIX_ARCH: ${{ matrix.ARCH }}
 
-    - uses: ./.github/actions/setup_ccache
+    - uses: ./actions/setup_ccache
       id: setup_ccache
       with:
         MATRIX_OS: ${{ matrix.OS }}

@@ -133,6 +133,22 @@ class CMakeBuild(build_ext):
             "-DCMAKE_VISIBILITY_INLINES_HIDDEN=ON",
             "-DCMAKE_C_VISIBILITY_PRESET=hidden",
             "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
+            "-DLLVM_USE_LINKER=gold",
+            "-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=AIE",
+            "-DLLVM_TARGETS_TO_BUILD=host",
+            "-DLIBC_ENABLE_USE_BY_CLANG=ON",
+            "-DLLVM_ENABLE_RUNTIMES=compiler-rt;libc",
+            "-DLLVM_BUILTIN_TARGETS=aie2-none-unknown-elf;aie-none-unknown-elf",
+            "-DLLVM_RUNTIME_TARGETS=aie-none-unknown-elf;aie2-none-unknown-elf",
+            "-DBUILTINS_aie-none-unknown-elf_LLVM_USE_LINKER=lld",
+            "-DBUILTINS_aie-none-unknown-elf_CMAKE_BUILD_TYPE=Release",
+            "-DRUNTIMES_aie-none-unknown-elf_LLVM_USE_LINKER=lld",
+            "-DRUNTIMES_aie-none-unknown-elf_CMAKE_BUILD_TYPE=Release",
+            "-DBUILTINS_aie2-none-unknown-elf_LLVM_USE_LINKER=lld",
+            "-DBUILTINS_aie2-none-unknown-elf_CMAKE_BUILD_TYPE=Release",
+            "-DRUNTIMES_aie2-none-unknown-elf_LLVM_USE_LINKER=lld",
+            "-DRUNTIMES_aie2-none-unknown-elf_CMAKE_BUILD_TYPE=Release",
+            "-DLLVM_LIBC_FULL_BUILD=ON",
         ]
         if platform.system() == "Windows":
             cmake_args += [
