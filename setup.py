@@ -243,7 +243,7 @@ class CMakeBuild(build_ext):
             # https://github.com/llvm/llvm-project/pull/89296
             env["MLIR_LIT_PYTHONPATH"] = os.pathsep.join(sys.path)
             subprocess.run(
-                ["cmake", "--build", ".", "--target", "check-mlir", *build_args],
+                ["cmake", "--build", ".", "--target", "check-all", *build_args],
                 cwd=build_temp,
                 env=env,
                 check=True,
