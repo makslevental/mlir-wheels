@@ -5,11 +5,12 @@ import platform
 import re
 import subprocess
 import sys
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 from pprint import pprint
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
+from distutils.command.install_data import install_data
 
 
 class CMakeExtension(Extension):
@@ -69,12 +70,15 @@ def get_cross_cmake_args():
     return cmake_args
 
 
-def get_exe_suffix():
-    if platform.system() == "Windows":
-        suffix = ".exe"
-    else:
-        suffix = ""
-    return suffix
+class MyInstallData(install_data):
+    def run(self):
+        self.mkpath(self.install_dir)
+        for f in self.data_files:
+            print(f)
+
+        print(type(self.distribution.data_files))
+        for f in self.distribution.data_files:
+            print(f)
 
 
 class CMakeBuild(build_ext):
@@ -238,7 +242,8 @@ class CMakeBuild(build_ext):
                 cwd=build_temp,
                 check=True,
             )
-            shutil.move(build_temp / "bin", install_dir)
+            shutil.rmtree(install_dir / "bin", ignore_errors=True)
+            shutil.copytree(build_temp / "bin", install_dir / "bin")
         else:
             subprocess.run(
                 ["cmake", "--build", ".", "--target", "install", *build_args],
@@ -301,16 +306,16 @@ if not build_temp.exists():
     build_temp.mkdir(parents=True)
 
 EXE_EXT = ".exe" if platform.system() == "Windows" else ""
-exes = [
-    "mlir-cpu-runner",
-    "mlir-opt",
-    "mlir-translate",
-]
 if not check_env("DEBUG_CI_FAST_BUILD"):
-    data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
+    exes = [
+        "mlir-cpu-runner",
+        "mlir-opt",
+        "mlir-translate",
+    ]
 else:
-    data_files = []
+    exes = ["llvm-tblgen"]
 
+data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
 
 setup(
     name="mlir",

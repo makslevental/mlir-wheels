@@ -83,10 +83,52 @@ jobs:
           echo "LLVM_PROJECT_COMMIT=${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
           DATETIME=$(date +"%Y%m%d%H")
           echo "DATETIME=${DATETIME}" | tee -a $GITHUB_OUTPUT
+          
+  settings:
+    
+    runs-on: ubuntu-latest
+    
+    needs: get_llvm_project_commit
+    
+    steps:
+      
+      - name: Set commons as env vars
+        id: settings
+        run: |
+          
+          APPLY_PATCHES="true"
+          if [ x"${{ inputs.APPLY_PATCHES }}" == x"false" ]; then
+            APPLY_PATCHES="false"
+          fi 
+          DEBUG_CI_FAST_BUILD="false"
+          if [ x"${{ inputs.DEBUG_CI_FAST_BUILD }}" == x"true" ]; then
+            DEBUG_CI_FAST_BUILD="true"
+          fi
+          RUN_TESTS="false"
+          if [ x"${{ inputs.RUN_TESTS }}" == x"true" ]; then
+            RUN_TESTS="true"
+          fi
+          
+          UPLOAD_ARTIFACTS="true"
+          if [ x"${{ github.event.schedule }}" == x"0 */4 * * *" ] || [ x"$DEBUG_CI_FAST_BUILD" == x"true" ]; then
+            UPLOAD_ARTIFACTS="false"
+          fi 
+          
+          echo "APPLY_PATCHES=$APPLY_PATCHES" | tee -a $GITHUB_OUTPUT
+          echo "DEBUG_CI_FAST_BUILD=$DEBUG_CI_FAST_BUILD" | tee -a $GITHUB_OUTPUT
+          echo "RUN_TESTS=$RUN_TESTS" | tee -a $GITHUB_OUTPUT
+          echo "UPLOAD_ARTIFACTS=$UPLOAD_ARTIFACTS" | tee -a $GITHUB_OUTPUT
+          
+    outputs:
+      APPLY_PATCHES: ${{ steps.settings.outputs.APPLY_PATCHES }}
+      DEBUG_CI_FAST_BUILD: ${{ steps.settings.outputs.DEBUG_CI_FAST_BUILD }}
+      RUN_TESTS: ${{ steps.settings.outputs.RUN_TESTS }}
+      LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+      DATETIME: ${{ needs.get_llvm_project_commit.outputs.DATETIME }}
 
   build:
 
-    needs: get_llvm_project_commit
+    needs: settings
 
     name: ${{ matrix.OS }} ${{ matrix.ARCH }} ${{ matrix.BUILD_CUDA && 'cuda' || '' }} ${{ matrix.BUILD_VULKAN && 'vulkan' || '' }} ${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
@@ -188,11 +230,32 @@ jobs:
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
-        curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
+        curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.settings.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
         unzip -q llvm.zip
         rm -rf llvm.zip
-        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+        LLVM_PROJECT_COMMIT=${{ needs.settings.outputs.LLVM_PROJECT_COMMIT }}
         mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
+
+    - name: Set env variables
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      run: |
+        
+        echo "APPLY_PATCHES=${{ needs.settings.outputs.APPLY_PATCHES }}" >> $GITHUB_ENV
+        echo "DEBUG_CI_FAST_BUILD=${{ needs.settings.outputs.DEBUG_CI_FAST_BUILD }}" >> $GITHUB_ENV
+        echo "RUN_TESTS=${{ needs.settings.outputs.RUN_TESTS }}" >> $GITHUB_ENV
+        echo "DATETIME=${{ needs.settings.outputs.DATETIME }}" >> $GITHUB_ENV
+        echo "LLVM_PROJECT_COMMIT=${{ needs.settings.outputs.LLVM_PROJECT_COMMIT }}" >> $GITHUB_ENV
+        
+        echo "BUILD_CUDA=${{ matrix.BUILD_CUDA }}" >> $GITHUB_ENV
+        echo "BUILD_OPENMP=${{ matrix.BUILD_OPENMP }}" >> $GITHUB_ENV
+        echo "BUILD_VULKAN=${{ matrix.BUILD_VULKAN }}" >> $GITHUB_ENV
+        echo "CIBW_ARCHS=${{ matrix.ARCH }}" >> $GITHUB_ENV
+        echo "MATRIX_OS=${{ matrix.OS }}" >> $GITHUB_ENV
+        
+        echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+        echo "HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"" >> $GITHUB_ENV
+        echo "PARALLEL_LEVEL=2" >> $GITHUB_ENV
+        echo "PIP_FIND_LINKS=https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" >> $GITHUB_ENV
 
     # build
 
@@ -201,19 +264,6 @@ jobs:
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
-        APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }} \
-        DEBUG_CI_FAST_BUILD=${{ inputs.DEBUG_CI_FAST_BUILD == '' && 'false' || inputs.DEBUG_CI_FAST_BUILD }} \
-        RUN_TESTS=${{ inputs.RUN_TESTS == '' && 'false' || inputs.RUN_TESTS }} \
-        BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
-        BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
-        BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
-        CIBW_ARCHS=${{ matrix.ARCH }} \
-        CMAKE_GENERATOR=Ninja \
-        DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
-        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
-        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
-        MATRIX_OS=${{ matrix.OS }} \
-        PARALLEL_LEVEL=2 \
         cibuildwheel --output-dir wheelhouse
 
     - name: build aarch ubuntu wheel
@@ -221,20 +271,8 @@ jobs:
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
-        export APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }}
         ./scripts/apply_patches.sh
-        
-        DEBUG_CI_FAST_BUILD=${{ inputs.DEBUG_CI_FAST_BUILD == '' && 'false' || inputs.DEBUG_CI_FAST_BUILD }} \
-        BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
-        BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
-        BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
-        CIBW_ARCHS=${{ matrix.ARCH }} \
-        CMAKE_GENERATOR=Ninja \
-        DATETIME=${{ needs.get_llvm_project_commit.outputs.DATETIME }} \
-        LLVM_PROJECT_COMMIT=${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }} \
-        MATRIX_OS=${{ matrix.OS }} \
-        PARALLEL_LEVEL=2 \
-        PIP_FIND_LINKS="https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" \
+        export RUN_TESTS=0
         pip wheel . -v -w wheelhouse
 
     - name: Clean llvm-project
@@ -263,7 +301,6 @@ jobs:
       run: |
         
         ccache -s
-        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
         rm -rf $HOST_CCACHE_DIR
         mv ./wheelhouse/.ccache $HOST_CCACHE_DIR
         ls -la $HOST_CCACHE_DIR
@@ -274,8 +311,7 @@ jobs:
       run: |
         
         ccache --print-stats
-        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-        find $HOST_CCACHE_DIR -exec touch -a -m -t "${{ needs.get_llvm_project_commit.outputs.DATETIME }}00" {} \;
+        find $HOST_CCACHE_DIR -exec touch -a -m -t "${{ needs.settings.outputs.DATETIME }}00" {} \;
 
     - name: rename non-windows
       if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-12' }}
@@ -301,7 +337,7 @@ jobs:
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       id: build_native_tools_wheel
-      if: inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
+      if: needs.settings.outputs.DEBUG_CI_FAST_BUILD != 'true'
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
@@ -330,16 +366,17 @@ jobs:
     # done
 
     - name: Upload wheels
-      if: github.event.schedule != '0 */4 * * *' && inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
+      if: needs.settings.outputs.UPLOAD_ARTIFACTS == 'true'
       uses: actions/upload-artifact@v3
       with:
         path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
         name: build_artifact
 
   upload_distro_wheels:
-    if: github.event.schedule != '0 */4 * * *' && inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
 
-    needs: build
+    needs: [settings, build]
+      
+    if: needs.settings.outputs.UPLOAD_ARTIFACTS == 'true'
 
     runs-on: ubuntu-latest
 
@@ -382,16 +419,17 @@ jobs:
           makeLatest: true
 
   call-build-python-bindings:
-    if: github.event.schedule != '0 */4 * * *' && inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
 
-    needs: [build, upload_distro_wheels, get_llvm_project_commit]
+    needs: [settings, upload_distro_wheels]
+    
+    if: needs.settings.outputs.UPLOAD_ARTIFACTS == 'true'
 
     permissions:
       contents: write
       id-token: write
 
     # DON'T FORGET TO CHANGE THIS IF YOU UPDATE WHEELS.YML
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@dont_checkout_in_base
     secrets: inherit # pass all secrets
     with:
       MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}
