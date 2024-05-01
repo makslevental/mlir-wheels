@@ -28,6 +28,8 @@ on:
         type: string
         required: false
         default: ''
+      # why are these strings and not type boolean?
+      # https://stackoverflow.com/a/76294014/9045206
       APPLY_PATCHES:
         description: 'whether to apply patches to source'
         type: string
@@ -35,6 +37,11 @@ on:
         default: 'true'
       RUN_TESTS:
         description: 'whether to run llvm tests after build'
+        type: string
+        required: false
+        default: 'false'
+      DEBUG_CI_FAST_BUILD:
+        description: 'whether to build only one single llvm target (llvm-tblgen)'
         type: string
         required: false
         default: 'false'
@@ -195,6 +202,7 @@ jobs:
       run: |
         
         APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }} \
+        DEBUG_CI_FAST_BUILD=${{ inputs.DEBUG_CI_FAST_BUILD == '' && 'false' || inputs.DEBUG_CI_FAST_BUILD }} \
         RUN_TESTS=${{ inputs.RUN_TESTS == '' && 'false' || inputs.RUN_TESTS }} \
         BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
         BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
@@ -216,6 +224,7 @@ jobs:
         export APPLY_PATCHES=${{ inputs.APPLY_PATCHES == '' && 'true' || inputs.APPLY_PATCHES }}
         ./scripts/apply_patches.sh
         
+        DEBUG_CI_FAST_BUILD=${{ inputs.DEBUG_CI_FAST_BUILD == '' && 'false' || inputs.DEBUG_CI_FAST_BUILD }} \
         BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
         BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
         BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
@@ -292,6 +301,7 @@ jobs:
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       id: build_native_tools_wheel
+      if: inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
@@ -320,14 +330,14 @@ jobs:
     # done
 
     - name: Upload wheels
-      if: success() || failure()
+      if: github.event.schedule != '0 */4 * * *' && inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
       uses: actions/upload-artifact@v3
       with:
         path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
         name: build_artifact
 
   upload_distro_wheels:
-    if: github.event.schedule != '0 */4 * * *'
+    if: github.event.schedule != '0 */4 * * *' && inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
 
     needs: build
 
@@ -372,7 +382,7 @@ jobs:
           makeLatest: true
 
   call-build-python-bindings:
-    if: github.event.schedule != '0 */4 * * *'
+    if: github.event.schedule != '0 */4 * * *' && inputs.DEBUG_CI_FAST_BUILD != 'true' && inputs.DEBUG_CI_FAST_BUILD != ''
 
     needs: [build, upload_distro_wheels, get_llvm_project_commit]
 

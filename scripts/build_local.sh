@@ -19,6 +19,7 @@ export BUILD_OPENMP=true
 export BUILD_VULKAN=false
 export BUILD_CUDA=false
 export APPLY_PATCHES=true
+export DEBUG_CI_FAST_BUILD=false
 
 if [ "$machine" == "linux" ]; then
   export MATRIX_OS=ubuntu-20.04

@@ -232,23 +232,31 @@ class CMakeBuild(build_ext):
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
-        subprocess.run(
-            ["cmake", "--build", ".", "--target", "install", *build_args],
-            cwd=build_temp,
-            check=True,
-        )
-        if RUN_TESTS:
-            env = os.environ.copy()
-            # PYTHONPATH needs to be set to find build deps like numpy
-            # https://github.com/llvm/llvm-project/pull/89296
-            env["MLIR_LIT_PYTHONPATH"] = os.pathsep.join(sys.path)
+        if check_env("DEBUG_CI_FAST_BUILD"):
             subprocess.run(
-                ["cmake", "--build", ".", "--target", "check-all", *build_args],
+                ["cmake", "--build", ".", "--target", "llvm-tblgen", *build_args],
                 cwd=build_temp,
-                env=env,
-                check=False,
+                check=True,
             )
-        shutil.rmtree(install_dir / "python_packages", ignore_errors=True)
+            shutil.move(build_temp / "bin", install_dir)
+        else:
+            subprocess.run(
+                ["cmake", "--build", ".", "--target", "install", *build_args],
+                cwd=build_temp,
+                check=True,
+            )
+            if RUN_TESTS:
+                env = os.environ.copy()
+                # PYTHONPATH needs to be set to find build deps like numpy
+                # https://github.com/llvm/llvm-project/pull/89296
+                env["MLIR_LIT_PYTHONPATH"] = os.pathsep.join(sys.path)
+                subprocess.run(
+                    ["cmake", "--build", ".", "--target", "check-all", *build_args],
+                    cwd=build_temp,
+                    env=env,
+                    check=False,
+                )
+            shutil.rmtree(install_dir / "python_packages", ignore_errors=True)
 
 
 def check_env(build):
@@ -298,7 +306,10 @@ exes = [
     "mlir-opt",
     "mlir-translate",
 ]
-data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
+if not check_env("DEBUG_CI_FAST_BUILD"):
+    data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
+else:
+    data_files = []
 
 
 setup(

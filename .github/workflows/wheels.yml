@@ -134,7 +134,6 @@ jobs:
       # done
 
       - name: Upload wheels
-        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
@@ -257,7 +256,6 @@ jobs:
       # done
 
       - name: Upload wheels
-        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
