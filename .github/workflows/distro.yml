@@ -392,7 +392,8 @@ jobs:
       contents: write
       id-token: write
 
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
+    # DON'T FORGET TO CHANGE THIS IF YOU UPDATE WHEELS.YML
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@dont_checkout_in_base
     secrets: inherit # pass all secrets
     with:
       MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}
