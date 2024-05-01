@@ -87,7 +87,7 @@ jobs:
         run: |
           
           WORKSPACE_ROOT="${{ steps.setup_base.outputs.WORKSPACE_ROOT }}"
-          if [[ ${{ matrix.OS }} == *"windows"* ]]; then
+          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
             WORKSPACE_ROOT=$(echo "/$WORKSPACE_ROOT" | sed -e 's/\\/\//g' -e 's/://')
           fi
           ls -lah
@@ -145,11 +145,11 @@ jobs:
         run: |
           
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          if [[ ${{ matrix.OS }} == *"windows"* ]]; then
+          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
             HOST_CCACHE_DIR=$(cygpath -u $HOST_CCACHE_DIR)
           fi
           if [ x"$HOST_CCACHE_DIR" != x"${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}" ]; then
-            mv "$HOST_CCACHE_DIR" "${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}"
+            mv "$HOST_CCACHE_DIR" "$(dirname ${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }})"
           fi
           
   build-linux-aarch64:
@@ -204,7 +204,7 @@ jobs:
         run: |
           
           WORKSPACE_ROOT="${{ steps.setup_base.outputs.WORKSPACE_ROOT }}"
-          if [[ ${{ matrix.OS }} == *"windows"* ]]; then
+          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
             WORKSPACE_ROOT=$(echo "/$WORKSPACE_ROOT" | sed -e 's/\\/\//g' -e 's/://')
           fi
           ls -lah
@@ -280,11 +280,11 @@ jobs:
         run: |
           
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          if [[ ${{ matrix.OS }} == *"windows"* ]]; then
+          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
             HOST_CCACHE_DIR=$(cygpath -u $HOST_CCACHE_DIR)
           fi
           if [ x"$HOST_CCACHE_DIR" != x"${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}" ]; then
-            mv "$HOST_CCACHE_DIR" "${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}"
+            mv "$HOST_CCACHE_DIR" "$(dirname ${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }})"
           fi
 
   upload_bindings_wheels:
