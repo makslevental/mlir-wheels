@@ -326,18 +326,6 @@ jobs:
         path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
         name: build_artifact
 
-    - name: copy ccache back to orig path
-      shell: bash
-      run: |
-        
-        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-        if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
-          HOST_CCACHE_DIR=$(cygpath -u $HOST_CCACHE_DIR)
-        fi
-        if [ x"$HOST_CCACHE_DIR" != x"${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}" ]; then
-          cp -r "$HOST_CCACHE_DIR" "$(dirname ${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }})"
-        fi
-
   upload_distro_wheels:
     if: github.event.schedule != '0 */4 * * *'
 
@@ -393,7 +381,7 @@ jobs:
       id-token: write
 
     # DON'T FORGET TO CHANGE THIS IF YOU UPDATE WHEELS.YML
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@dont_checkout_in_base
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
     secrets: inherit # pass all secrets
     with:
       MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}

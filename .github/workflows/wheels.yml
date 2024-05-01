@@ -140,18 +140,6 @@ jobs:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
           name: build_artifact_python_bindings
 
-      - name: copy ccache back to orig path
-        shell: bash
-        run: |
-          
-          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
-            HOST_CCACHE_DIR=$(cygpath -u $HOST_CCACHE_DIR)
-          fi
-          if [ x"$HOST_CCACHE_DIR" != x"${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}" ]; then
-            mv "$HOST_CCACHE_DIR" "$(dirname ${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }})"
-          fi
-          
   build-linux-aarch64:
 
     continue-on-error: true
@@ -274,18 +262,6 @@ jobs:
         with:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
           name: build_artifact_python_bindings
-
-      - name: copy ccache back to orig path
-        shell: bash
-        run: |
-          
-          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
-            HOST_CCACHE_DIR=$(cygpath -u $HOST_CCACHE_DIR)
-          fi
-          if [ x"$HOST_CCACHE_DIR" != x"${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}" ]; then
-            cp -r "$HOST_CCACHE_DIR" "$(dirname ${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }})"
-          fi
 
   upload_bindings_wheels:
 
