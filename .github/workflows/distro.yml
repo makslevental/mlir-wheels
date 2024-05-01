@@ -285,6 +285,7 @@ jobs:
     - name: Docker prune
       if: contains(inputs.MATRIX_OS, 'ubuntu')
       run: |
+        
         docker system prune -a -f
 
     - name: Get wheel version
@@ -311,7 +312,7 @@ jobs:
       run: |
         
         ccache --print-stats
-        find $HOST_CCACHE_DIR -exec touch -a -m -t "${{ needs.settings.outputs.DATETIME }}00" {} \;
+        find $HOST_CCACHE_DIR -exec touch -a -m -t 197001010000 {} \;
 
     - name: rename non-windows
       if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-12' }}
@@ -331,13 +332,14 @@ jobs:
       if: ${{ matrix.OS == 'windows-2019' }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
+        
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp310-cp310', 'py3-none' }
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
 
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       id: build_native_tools_wheel
-      if: needs.settings.outputs.DEBUG_CI_FAST_BUILD != 'true'
+      if: ${{ needs.settings.outputs.DEBUG_CI_FAST_BUILD != 'true' }}
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
@@ -359,14 +361,14 @@ jobs:
         pushd native_tools
 
         MLIR_WHEEL_VERSION=${{ steps.get_wheel_version.outputs.MLIR_WHEEL_VERSION }} \
-        python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
+          python setup.py bdist_wheel --dist-dir ../wheelhouse --plat $PLAT
         
         popd
 
     # done
 
     - name: Upload wheels
-      if: needs.settings.outputs.UPLOAD_ARTIFACTS == 'true'
+      if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
       uses: actions/upload-artifact@v3
       with:
         path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
@@ -376,7 +378,7 @@ jobs:
 
     needs: [settings, build]
       
-    if: needs.settings.outputs.UPLOAD_ARTIFACTS == 'true'
+    if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
 
     runs-on: ubuntu-latest
 
@@ -422,7 +424,7 @@ jobs:
 
     needs: [settings, upload_distro_wheels]
     
-    if: needs.settings.outputs.UPLOAD_ARTIFACTS == 'true'
+    if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
 
     permissions:
       contents: write

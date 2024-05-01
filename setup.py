@@ -1,16 +1,16 @@
-import shutil
-from datetime import datetime
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
+from datetime import datetime
+from distutils.command.install_data import install_data
 from pathlib import Path
 from pprint import pprint
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
-from distutils.command.install_data import install_data
 
 
 class CMakeExtension(Extension):
@@ -262,6 +262,23 @@ class CMakeBuild(build_ext):
                     check=False,
                 )
             shutil.rmtree(install_dir / "python_packages", ignore_errors=True)
+
+        subprocess.run(
+            [
+                "find",
+                ".",
+                "-exec",
+                "touch",
+                "-a",
+                "-m",
+                "-t",
+                "197001010000",
+                "{}",
+                ";",
+            ],
+            cwd=install_dir,
+            check=False,
+        )
 
 
 def check_env(build):

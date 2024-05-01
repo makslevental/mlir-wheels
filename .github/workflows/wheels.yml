@@ -120,7 +120,7 @@ jobs:
           popd
 
       - name: Download cache from container ubuntu
-        if: matrix.OS == 'ubuntu-20.04' && (success() || failure())
+        if: ${{ matrix.OS == 'ubuntu-20.04' && (success() || failure()) }}
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
           
@@ -232,7 +232,6 @@ jobs:
           popd
 
       - name: Download cache from container ubuntu
-        if: success() || failure()
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
           
@@ -249,8 +248,7 @@ jobs:
           
           ccache -s
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          DATETIME=$(date +"%Y%m%d%H")
-          find $HOST_CCACHE_DIR -exec touch -a -m -t "$DATETIME""00" {} \;
+          find $HOST_CCACHE_DIR -exec touch -a -m -t 197001010000 {} \;
           ccache -s
 
       # done
