@@ -335,7 +335,7 @@ jobs:
           HOST_CCACHE_DIR=$(cygpath -u $HOST_CCACHE_DIR)
         fi
         if [ x"$HOST_CCACHE_DIR" != x"${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }}" ]; then
-          mv "$HOST_CCACHE_DIR" "$(dirname ${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }})"
+          cp -r "$HOST_CCACHE_DIR" "$(dirname ${{ steps.setup_ccache.outputs.ORIG_HOST_CCACHE_DIR }})"
         fi
 
   upload_distro_wheels:
