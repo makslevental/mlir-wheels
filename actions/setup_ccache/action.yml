@@ -10,35 +10,31 @@ inputs:
   EXTRA_KEY:
     description: ''
     required: false
-
-outputs:
-  HOST_CCACHE_DIR:
-    description: ''
-    value: ${{ steps.configure_ccache_dir_on_host.outputs.HOST_CCACHE_DIR }}
+  WORKSPACE_ROOT:
+    description: 'workspace root to place ccache cache'
+    required: true
 
 description: ''
 
 runs:
   using: "composite"
   steps:
+    - name: CWD to workspace_root
+      shell: bash
+      run: |
+        
+        cd "${{ inputs.WORKSPACE_ROOT }}"
+    
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.12
       with:
         key: ${{ inputs.MATRIX_OS }}-${{ inputs.MATRIX_ARCH }}-${{ inputs.EXTRA_KEY }}
         max-size: "1G"
         verbose: 2
-
-    - name: Configure ccache dir on host ubuntu
-      if: contains(inputs.MATRIX_OS, 'ubuntu')
-      shell: bash
-      id: configure_ccache_dir_on_host
-      run: |
-        
-        HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-        mkdir -p $HOST_CCACHE_DIR
-        echo "HOST_CCACHE_DIR=$HOST_CCACHE_DIR" | tee -a $GITHUB_OUTPUT
+        variant: ccache
 
     - name: Configure ccache
+      working-directory: ${{ inputs.WORKSPACE_ROOT }}
       if: contains(inputs.MATRIX_OS, 'ubuntu') || contains(inputs.MATRIX_OS, 'macos')
       shell: bash
       run: |
@@ -50,8 +46,11 @@ runs:
         fi
 
     - name: Configure ccache
+      working-directory: ${{ inputs.WORKSPACE_ROOT }}
       shell: bash
       run: |
+        
+        ccache -p
         ccache -z
         # See https://github.com/hendrikmuhs/ccache-action/issues/146
         ccache --set-config=compiler_check=content

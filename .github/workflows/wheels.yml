@@ -59,11 +59,13 @@ jobs:
             ARCH: arm64
             BUILD_OPENMP: true
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Checkout actions
         uses: actions/checkout@v3
-        with:
-          sparse-checkout: actions
 
       - uses: ./actions/setup_base
         id: setup_base
@@ -77,11 +79,28 @@ jobs:
           MATRIX_OS: ${{ matrix.OS }}
           MATRIX_ARCH: ${{ matrix.ARCH }}
           EXTRA_KEY: ${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
+          WORKSPACE_ROOT: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+
+        # This step is needed because action/checkout does not support paths.
+        # don't move because you can't parameterize -uses: ./actions/setup_ccache with workspace_root
+      - name: Copy stuff to workspace_root
+        run: |
+          
+          WORKSPACE_ROOT="${{ steps.setup_base.outputs.WORKSPACE_ROOT }}"
+          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
+            WORKSPACE_ROOT=$(echo "/$WORKSPACE_ROOT" | sed -e 's/\\/\//g' -e 's/://')
+          fi
+          ls -lah
+          
+          if [[ x"$PWD" != x"$WORKSPACE_ROOT" ]]; then
+            shopt -s dotglob
+            cp -r ./* "$WORKSPACE_ROOT"
+          fi
+          ls -lah "$WORKSPACE_ROOT"
 
       # build
 
       - name: cibuildwheel python bindings
-        shell: bash
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
           
@@ -93,7 +112,7 @@ jobs:
           BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
           CIBW_ARCHS=${{ matrix.ARCH }} \
           CMAKE_GENERATOR=Ninja \
-          HOST_CCACHE_DIR=${{ steps.setup_ccache.outputs.HOST_CCACHE_DIR }} \
+          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
           MATRIX_OS=${{ matrix.OS }} \
           MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
           cibuildwheel --output-dir ../wheelhouse
@@ -101,9 +120,8 @@ jobs:
           popd
 
       - name: Download cache from container ubuntu
-        if: matrix.OS == 'ubuntu-20.04' && (success() || failure())
+        if: ${{ matrix.OS == 'ubuntu-20.04' && (success() || failure()) }}
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-        shell: bash
         run: |
           
           ccache -s
@@ -116,7 +134,6 @@ jobs:
       # done
 
       - name: Upload wheels
-        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
@@ -154,9 +171,6 @@ jobs:
     steps:
       - name: Checkout actions
         uses: actions/checkout@v3
-        with:
-          sparse-checkout: |
-            .github/actions
 
       - uses: ./actions/setup_base
         id: setup_base
@@ -169,6 +183,24 @@ jobs:
         with:
           MATRIX_OS: ${{ matrix.OS }}
           MATRIX_ARCH: ${{ matrix.ARCH }}
+          WORKSPACE_ROOT: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+
+        # This step is needed because action/checkout does not support paths.
+        # don't move because you can't parameterize -uses: ./actions/setup_ccache with workspace_root
+      - name: Copy stuff to workspace_root
+        run: |
+          
+          WORKSPACE_ROOT="${{ steps.setup_base.outputs.WORKSPACE_ROOT }}"
+          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
+            WORKSPACE_ROOT=$(echo "/$WORKSPACE_ROOT" | sed -e 's/\\/\//g' -e 's/://')
+          fi
+          ls -lah
+          
+          if [[ x"$PWD" != x"$WORKSPACE_ROOT" ]]; then
+            shopt -s dotglob
+            cp -r ./* "$WORKSPACE_ROOT"
+          fi
+          ls -lah "$WORKSPACE_ROOT"
 
       - name: Set up QEMU
         if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
@@ -179,7 +211,6 @@ jobs:
       # build
 
       - name: cibuildwheel python bindings aarch64
-        shell: bash
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
           
@@ -193,7 +224,7 @@ jobs:
           CIBW_BUILD=${{ matrix.PY_VERSION }}-manylinux_aarch64 \
           CIBW_CONTAINER_ENGINE="docker; create_args: --platform=linux/aarch64" \
           CMAKE_GENERATOR=Ninja \
-          HOST_CCACHE_DIR=${{ steps.setup_ccache.outputs.HOST_CCACHE_DIR }} \
+          HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
           MATRIX_OS=${{ matrix.OS }} \
           MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
           cibuildwheel --output-dir ../wheelhouse
@@ -201,9 +232,7 @@ jobs:
           popd
 
       - name: Download cache from container ubuntu
-        if: success() || failure()
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-        shell: bash
         run: |
           
           ccache -s
@@ -215,19 +244,16 @@ jobs:
 
       - name: Reset datetime ccache
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-        shell: bash
         run: |
           
           ccache -s
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)"
-          DATETIME=$(date +"%Y%m%d%H")
-          find $HOST_CCACHE_DIR -exec touch -a -m -t "$DATETIME""00" {} \;
+          find $HOST_CCACHE_DIR -exec touch -a -m -t 197001010000 {} \;
           ccache -s
 
       # done
 
       - name: Upload wheels
-        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl

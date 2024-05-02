@@ -1,11 +1,12 @@
-import shutil
-from datetime import datetime
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
-from pathlib import Path, PureWindowsPath
+from datetime import datetime
+from distutils.command.install_data import install_data
+from pathlib import Path
 from pprint import pprint
 
 from setuptools import Extension, setup
@@ -69,12 +70,15 @@ def get_cross_cmake_args():
     return cmake_args
 
 
-def get_exe_suffix():
-    if platform.system() == "Windows":
-        suffix = ".exe"
-    else:
-        suffix = ""
-    return suffix
+class MyInstallData(install_data):
+    def run(self):
+        self.mkpath(self.install_dir)
+        for f in self.data_files:
+            print(f)
+
+        print(type(self.distribution.data_files))
+        for f in self.distribution.data_files:
+            print(f)
 
 
 class CMakeBuild(build_ext):
@@ -232,23 +236,49 @@ class CMakeBuild(build_ext):
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
-        subprocess.run(
-            ["cmake", "--build", ".", "--target", "install", *build_args],
-            cwd=build_temp,
-            check=True,
-        )
-        if RUN_TESTS:
-            env = os.environ.copy()
-            # PYTHONPATH needs to be set to find build deps like numpy
-            # https://github.com/llvm/llvm-project/pull/89296
-            env["MLIR_LIT_PYTHONPATH"] = os.pathsep.join(sys.path)
+        if check_env("DEBUG_CI_FAST_BUILD"):
             subprocess.run(
-                ["cmake", "--build", ".", "--target", "check-all", *build_args],
+                ["cmake", "--build", ".", "--target", "llvm-tblgen", *build_args],
                 cwd=build_temp,
-                env=env,
-                check=False,
+                check=True,
             )
-        shutil.rmtree(install_dir / "python_packages", ignore_errors=True)
+            shutil.rmtree(install_dir / "bin", ignore_errors=True)
+            shutil.copytree(build_temp / "bin", install_dir / "bin")
+        else:
+            subprocess.run(
+                ["cmake", "--build", ".", "--target", "install", *build_args],
+                cwd=build_temp,
+                check=True,
+            )
+            if RUN_TESTS:
+                env = os.environ.copy()
+                # PYTHONPATH needs to be set to find build deps like numpy
+                # https://github.com/llvm/llvm-project/pull/89296
+                env["MLIR_LIT_PYTHONPATH"] = os.pathsep.join(sys.path)
+                subprocess.run(
+                    ["cmake", "--build", ".", "--target", "check-all", *build_args],
+                    cwd=build_temp,
+                    env=env,
+                    check=False,
+                )
+            shutil.rmtree(install_dir / "python_packages", ignore_errors=True)
+
+        subprocess.run(
+            [
+                "find",
+                ".",
+                "-exec",
+                "touch",
+                "-a",
+                "-m",
+                "-t",
+                "197001010000",
+                "{}",
+                ";",
+            ],
+            cwd=install_dir,
+            check=False,
+        )
 
 
 def check_env(build):
@@ -293,13 +323,16 @@ if not build_temp.exists():
     build_temp.mkdir(parents=True)
 
 EXE_EXT = ".exe" if platform.system() == "Windows" else ""
-exes = [
-    "mlir-cpu-runner",
-    "mlir-opt",
-    "mlir-translate",
-]
-data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
+if not check_env("DEBUG_CI_FAST_BUILD"):
+    exes = [
+        "mlir-cpu-runner",
+        "mlir-opt",
+        "mlir-translate",
+    ]
+else:
+    exes = ["llvm-tblgen"]
 
+data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
 
 setup(
     name="mlir",
