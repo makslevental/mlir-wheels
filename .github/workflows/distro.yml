@@ -123,6 +123,7 @@ jobs:
       APPLY_PATCHES: ${{ steps.settings.outputs.APPLY_PATCHES }}
       DEBUG_CI_FAST_BUILD: ${{ steps.settings.outputs.DEBUG_CI_FAST_BUILD }}
       RUN_TESTS: ${{ steps.settings.outputs.RUN_TESTS }}
+      UPLOAD_ARTIFACTS: ${{ steps.settings.outputs.UPLOAD_ARTIFACTS }}
       LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
       DATETIME: ${{ needs.get_llvm_project_commit.outputs.DATETIME }}
 
