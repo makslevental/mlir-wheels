@@ -258,6 +258,13 @@ jobs:
         echo "PARALLEL_LEVEL=2" >> $GITHUB_ENV
         echo "PIP_FIND_LINKS=https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest" >> $GITHUB_ENV
 
+    - name: set ENV macos
+      if: contains(matrix.OS, 'macos')
+      shell: bash
+      run: |
+        
+        echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)" | tee -a $GITHUB_ENV
+
     # build
 
     - name: cibuildwheel

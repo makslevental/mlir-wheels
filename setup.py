@@ -9,6 +9,7 @@ from distutils.command.install_data import install_data
 from pathlib import Path
 from pprint import pprint
 
+import setuptools
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
@@ -218,8 +219,8 @@ class CMakeBuild(build_ext):
                 build_args += ["--config", cfg]
 
         if sys.platform.startswith("darwin"):
-            osx_version = os.getenv("OSX_VERSION", "11.6")
-            cmake_args += [f"-DCMAKE_OSX_DEPLOYMENT_TARGET={osx_version}"]
+            macosx_deployment_target = os.getenv("MACOSX_DEPLOYMENT_TARGET", "11.6")
+            cmake_args += [f"-DCMAKE_OSX_DEPLOYMENT_TARGET={macosx_deployment_target}"]
             # Cross-compile support for macOS - respect ARCHFLAGS if set
             archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
             if archs:

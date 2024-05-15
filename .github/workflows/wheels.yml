@@ -98,6 +98,13 @@ jobs:
           fi
           ls -lah "$WORKSPACE_ROOT"
 
+      - name: set ENV macos
+        if: contains(matrix.OS, 'macos')
+        shell: bash
+        run: |
+          
+          echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)" | tee -a $GITHUB_ENV
+
       # build
 
       - name: cibuildwheel python bindings
