@@ -36,44 +36,46 @@ def get_cross_cmake_args():
     if CIBW_ARCHS != platform.machine():
         cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
 
+    cmake_args["LLVM_TARGET_ARCH"] = ARCH
+
     if platform.system() == "Darwin":
         if ARCH == "AArch64":
             cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
             cmake_args["CMAKE_OSX_ARCHITECTURES"] = "arm64"
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "arm64-apple-darwin21.6.0"
-            cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-apple-darwin"
+            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
+                "LLVM_DEFAULT_TARGET_TRIPLE"
+            ] = "arm64-apple-darwin21.6.0"
             # see llvm/cmake/modules/CrossCompile.cmake:llvm_create_cross_target
-            cmake_args["CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"] = (
-                "-DCMAKE_C_COMPILER=clang;-DCMAKE_CXX_COMPILER=clang++"
-            )
-        elif ARCH == "X86":
-            cmake_args["CMAKE_OSX_ARCHITECTURES"] = "x86_64"
+            cmake_args[
+                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
+            ] = "-DCMAKE_C_COMPILER=clang;-DCMAKE_CXX_COMPILER=clang++"
     elif platform.system() == "Linux":
         if ARCH == "AArch64":
             cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
             cmake_args["CMAKE_CXX_COMPILER"] = "aarch64-linux-gnu-g++"
             cmake_args["CMAKE_CXX_FLAGS"] = "-static-libgcc -static-libstdc++"
             cmake_args["CMAKE_C_COMPILER"] = "aarch64-linux-gnu-gcc"
-            cmake_args["CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"] = (
-                "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
-            )
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "aarch64-linux-gnu"
-            cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-unknown-linux-gnu"
-        elif ARCH == "X86":
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "x86_64-unknown-linux-gnu"
+            cmake_args[
+                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
+            ] = "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
+            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
+                "LLVM_DEFAULT_TARGET_TRIPLE"
+            ] = "aarch64-linux-gnu"
         elif ARCH == "wasm32-wasi":
             cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
-            cmake_args["CMAKE_EXE_LINKER_FLAGS"] = (
-                "-sSTANDALONE_WASM=1 -sWASM=1 -sWASM_BIGINT=1"
-            )
+            cmake_args[
+                "CMAKE_EXE_LINKER_FLAGS"
+            ] = "-sSTANDALONE_WASM=1 -sWASM=1 -sWASM_BIGINT=1"
             cmake_args["CMAKE_SYSTEM_NAME"] = "Emscripten"
             cmake_args["CMAKE_TOOLCHAIN_FILE"] = os.getenv("CMAKE_TOOLCHAIN_FILE")
-            cmake_args["CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"] = (
-                "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
-            )
+            cmake_args[
+                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
+            ] = "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
             cmake_args["LLVM_BUILD_DOCS"] = "OFF"
             cmake_args["LLVM_BUILD_TOOLS"] = "OFF"
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "wasm32-wasi"
+            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
+                "LLVM_DEFAULT_TARGET_TRIPLE"
+            ] = "wasm32-wasi"
             cmake_args["LLVM_ENABLE_BACKTRACES"] = "OFF"
             cmake_args["LLVM_ENABLE_BINDINGS"] = "OFF"
             cmake_args["LLVM_ENABLE_CRASH_OVERRIDES"] = "OFF"
@@ -88,7 +90,6 @@ def get_cross_cmake_args():
             cmake_args["LLVM_ENABLE_ZLIB"] = "OFF"
             cmake_args["LLVM_ENABLE_ZSTD"] = "OFF"
             cmake_args["LLVM_HAVE_LIBXAR"] = "OFF"
-            cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-unknown-linux-gnu"
             cmake_args["LLVM_INCLUDE_BENCHMARKS"] = "OFF"
             cmake_args["LLVM_INCLUDE_EXAMPLES"] = "OFF"
             cmake_args["LLVM_INCLUDE_TESTS"] = "OFF"
@@ -97,8 +98,6 @@ def get_cross_cmake_args():
 
     if BUILD_CUDA:
         cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
-
-    cmake_args["LLVM_TARGET_ARCH"] = ARCH
 
     return cmake_args
 
