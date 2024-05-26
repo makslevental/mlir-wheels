@@ -6,7 +6,6 @@ PATCHES="\
 add_td_to_mlirpythoncapi_headers \
 mscv \
 remove_openmp_dep_on_clang_and_export_async_symbols \
-tblgen \
 "
 
 if [[ x"${APPLY_PATCHES:-true}" == x"true" ]]; then
