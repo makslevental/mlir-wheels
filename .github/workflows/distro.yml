@@ -263,7 +263,8 @@ jobs:
       shell: bash
       run: |
         
-        echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)" | tee -a $GITHUB_ENV
+        # echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)" | tee -a $GITHUB_ENV
+        echo "MACOSX_DEPLOYMENT_TARGET=11.0" | tee -a $GITHUB_ENV
 
     # build
 
@@ -439,7 +440,7 @@ jobs:
       id-token: write
 
     # DON'T FORGET TO CHANGE THIS IF YOU UPDATE WHEELS.YML
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@rollback_macos_deploy
     secrets: inherit # pass all secrets
     with:
       MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}
