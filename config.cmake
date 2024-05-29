@@ -99,3 +99,7 @@ set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(LLVM_ENABLE_Z3_SOLVER OFF CACHE BOOL "")
 set(LLVM_INCLUDE_DOCS OFF CACHE BOOL "")
 set(LLVM_INCLUDE_GO_TESTS OFF CACHE BOOL "")
+
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+cmake_print_variables(${_variableNames})
