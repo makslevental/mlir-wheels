@@ -133,7 +133,13 @@ class CMakeBuild(build_ext):
             "-DBUILD_SHARED_LIBS=OFF",
             "-DLLVM_BUILD_BENCHMARKS=OFF",
             "-DLLVM_BUILD_EXAMPLES=OFF",
-            "-DLLVM_BUILD_RUNTIMES=OFF",
+
+            "-DLLVM_ENABLE_RUNTIMES=compiler-rt",
+            "-DCLANG_ENABLE_STATIC_ANALYZER=ON",
+            "-DLLVM_BUILD_LLVM_DYLIB=ON",
+            "-DLLVM_LINK_LLVM_DYLIB=ON",
+
+            # "-DLLVM_BUILD_RUNTIMES=OFF",
             f"-DLLVM_BUILD_TESTS={RUN_TESTS}",
             "-DLLVM_BUILD_TOOLS=ON",
             "-DLLVM_BUILD_UTILS=ON",
@@ -143,7 +149,7 @@ class CMakeBuild(build_ext):
             "-DLLVM_ENABLE_ZSTD=OFF",
             "-DLLVM_INCLUDE_BENCHMARKS=OFF",
             "-DLLVM_INCLUDE_EXAMPLES=OFF",
-            "-DLLVM_INCLUDE_RUNTIMES=OFF",
+            # "-DLLVM_INCLUDE_RUNTIMES=OFF",
             f"-DLLVM_INCLUDE_TESTS={RUN_TESTS}",
             "-DLLVM_INCLUDE_TOOLS=ON",
             "-DLLVM_INCLUDE_UTILS=ON",
@@ -184,7 +190,7 @@ class CMakeBuild(build_ext):
         if "WebAssembly" not in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]:
             cmake_args += ["-DMLIR_ENABLE_BINDINGS_PYTHON=ON"]
 
-        LLVM_ENABLE_PROJECTS = "llvm;mlir"
+        LLVM_ENABLE_PROJECTS = "llvm;mlir;clang;clang-tools-extra;lld"
 
         if BUILD_CUDA:
             cmake_args += [
