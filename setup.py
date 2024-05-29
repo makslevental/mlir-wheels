@@ -121,7 +121,7 @@ class CMakeBuild(build_ext):
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
 
-        RUN_TESTS = 1 if check_env("RUN_TESTS") else 0
+        RUN_TESTS = "ON" if check_env("RUN_TESTS") else "OFF"
         # make windows happy
         PYTHON_EXECUTABLE = str(Path(sys.executable))
         if platform.system() == "Windows":
