@@ -103,7 +103,8 @@ jobs:
         shell: bash
         run: |
           
-          echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)" | tee -a $GITHUB_ENV
+          # echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)" | tee -a $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=11.0" | tee -a $GITHUB_ENV
 
       # build
 
