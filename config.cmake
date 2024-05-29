@@ -36,11 +36,6 @@ set(LLVM_VERSION_SUFFIX "" CACHE STRING "")
 # which causes pure duplication of various shlibs for Python wheels.
 set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON CACHE BOOL "")
 
-# prevent symbol collision that leads to multiple pass registration and such
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON CACHE STRING "")
-set(CMAKE_C_VISIBILITY_PRESET hidden CACHE STRING "")
-set(CMAKE_CXX_VISIBILITY_PRESET hidden CACHE STRING "")
-
 if(WIN32)
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded CACHE STRING "")
   set(CMAKE_C_COMPILER cl CACHE STRING "")
