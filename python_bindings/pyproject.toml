@@ -34,7 +34,9 @@ before-build = [
     "{project}/scripts/pip_install_mlir.sh",
 ]
 repair-wheel-command = [
-    'LD_LIBRARY_PATH=$(python -c "import mlir; print(mlir.__path__[0])")/lib auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1'
+    'ls -lh',
+    'PLAT=$(python setup.py --plat)',
+    'LD_LIBRARY_PATH=$(python -c "import mlir; print(mlir.__path__[0])")/lib auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1 --plat $PLAT'
 ]
 
 [tool.cibuildwheel.macos]
