@@ -27,9 +27,6 @@ def get_cross_cmake_args():
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "AArch64"
     elif CIBW_ARCHS in {"x86_64", "AMD64"}:
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "X86"
-    elif CIBW_ARCHS in {"wasm32"}:
-        cmake_args["LLVM_TARGETS_TO_BUILD"] = "WebAssembly"
-        ARCH = "wasm32-wasi"
     else:
         raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
     if CIBW_ARCHS != platform.machine():
@@ -60,40 +57,6 @@ def get_cross_cmake_args():
             cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
                 "LLVM_DEFAULT_TARGET_TRIPLE"
             ] = "aarch64-linux-gnu"
-        elif ARCH == "wasm32-wasi":
-            cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
-            cmake_args[
-                "CMAKE_EXE_LINKER_FLAGS"
-            ] = "-sSTANDALONE_WASM=1 -sWASM=1 -sWASM_BIGINT=1"
-            cmake_args["CMAKE_SYSTEM_NAME"] = "Emscripten"
-            cmake_args["CMAKE_TOOLCHAIN_FILE"] = os.getenv("CMAKE_TOOLCHAIN_FILE")
-            cmake_args[
-                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
-            ] = "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
-            cmake_args["LLVM_BUILD_DOCS"] = "OFF"
-            cmake_args["LLVM_BUILD_TOOLS"] = "OFF"
-            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
-                "LLVM_DEFAULT_TARGET_TRIPLE"
-            ] = "wasm32-wasi"
-            cmake_args["LLVM_ENABLE_BACKTRACES"] = "OFF"
-            cmake_args["LLVM_ENABLE_BINDINGS"] = "OFF"
-            cmake_args["LLVM_ENABLE_CRASH_OVERRIDES"] = "OFF"
-            cmake_args["LLVM_ENABLE_LIBEDIT"] = "OFF"
-            cmake_args["LLVM_ENABLE_LIBPFM"] = "OFF"
-            cmake_args["LLVM_ENABLE_LIBXML2"] = "OFF"
-            cmake_args["LLVM_ENABLE_OCAMLDOC"] = "OFF"
-            cmake_args["LLVM_ENABLE_PIC"] = "OFF"
-            cmake_args["LLVM_ENABLE_TERMINFO"] = "OFF"
-            cmake_args["LLVM_ENABLE_THREADS"] = "OFF"
-            cmake_args["LLVM_ENABLE_UNWIND_TABLES"] = "OFF"
-            cmake_args["LLVM_ENABLE_ZLIB"] = "OFF"
-            cmake_args["LLVM_ENABLE_ZSTD"] = "OFF"
-            cmake_args["LLVM_HAVE_LIBXAR"] = "OFF"
-            cmake_args["LLVM_INCLUDE_BENCHMARKS"] = "OFF"
-            cmake_args["LLVM_INCLUDE_EXAMPLES"] = "OFF"
-            cmake_args["LLVM_INCLUDE_TESTS"] = "OFF"
-            cmake_args["LLVM_INCLUDE_UTILS"] = "OFF"
-            cmake_args["LLVM_TARGETS_TO_BUILD"] = "WebAssembly"
 
     if BUILD_CUDA:
         cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
@@ -142,8 +105,6 @@ class CMakeBuild(build_ext):
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
-        if "WebAssembly" not in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]:
-            cmake_args += ["-DMLIR_ENABLE_BINDINGS_PYTHON=ON"]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]

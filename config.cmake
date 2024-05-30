@@ -77,7 +77,10 @@ if(BUILD_OPENMP)
 endif()
 
 # iree compat
-set(LLVM_ENABLE_RUNTIMES "compiler-rt" CACHE STRING "")
+# currently this fails under cross-compile (surface symptom is lack of __bf16 on mac arm cross)
+# eventually figure this out https://llvm.org/docs/HowToCrossCompileBuiltinsOnArm.html
+# and thus restore access to sanitizers
+#set(LLVM_ENABLE_RUNTIMES "compiler-rt" CACHE STRING "")
 set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 set(CLANG_ENABLE_STATIC_ANALYZER ON CACHE BOOL "")
