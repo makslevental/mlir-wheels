@@ -235,7 +235,7 @@ jobs:
       run: |
         
         curl -s https://codeload.github.com/llvm/llvm-project/zip/${{ needs.settings.outputs.LLVM_PROJECT_COMMIT }} -o llvm.zip
-        unzip -q llvm.zip
+        unzip -o -q llvm.zip
         rm -rf llvm.zip
         LLVM_PROJECT_COMMIT=${{ needs.settings.outputs.LLVM_PROJECT_COMMIT }}
         mv llvm-project-$LLVM_PROJECT_COMMIT llvm-project
