@@ -8,6 +8,10 @@ mscv \
 remove_openmp_dep_on_clang_and_export_async_symbols \
 "
 
+if [ x"$CIBW_ARCHS" == x"wasm32" ]; then
+  PATCHES="$PATCHES wasm_mlir_opt"
+fi
+
 if [[ x"${APPLY_PATCHES:-true}" == x"true" ]]; then
   for PATCH in $PATCHES; do
     echo "applying $PATCH"

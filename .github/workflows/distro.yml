@@ -147,6 +147,9 @@ jobs:
           - OS: ubuntu-20.04
             ARCH: x86_64
 
+          - OS: ubuntu-22.04
+            ARCH: wasm32
+
           - OS: ubuntu-20.04
             ARCH: aarch64
 
@@ -269,7 +272,7 @@ jobs:
     # build
 
     - name: cibuildwheel
-      if: ${{ matrix.OS != 'ubuntu-20.04' || matrix.ARCH != 'aarch64' }}
+      if: ${{ matrix.ARCH != 'aarch64' && matrix.ARCH != 'wasm32' }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
@@ -283,6 +286,71 @@ jobs:
         ./scripts/apply_patches.sh
         export RUN_TESTS=0
         pip wheel . -v -w wheelhouse
+
+    - name: Setup Emscripten
+      if: contains(matrix.ARCH, 'wasm')
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: 3.1.60
+
+    - name: build wasm ubuntu wheel
+      if: contains(matrix.ARCH, 'wasm')
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      run: |
+        
+        ./scripts/apply_patches.sh
+        $EMSDK/emsdk activate 3.1.60
+        source $EMSDK/emsdk_env.sh
+
+    - name: build wasm ubuntu wheel
+      if: contains(matrix.ARCH, 'wasm')
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      # [scalar content] can be written with the folded style (denoted by “>”)
+      # where each line break is folded to a space unless it ends an empty or a more-indented line.
+      run: >-
+        cmake -G Ninja
+        -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake 
+        -DLLVM_BUILD_TOOLS="OFF" 
+        -DLLVM_INCLUDE_UTILS="OFF" 
+        -DLLVM_INCLUDE_EXAMPLES="OFF" 
+        -DLLVM_INCLUDE_TESTS="OFF" 
+        -DLLVM_INCLUDE_BENCHMARKS="OFF" 
+        -DLLVM_ENABLE_BINDINGS="OFF" 
+        -DLLVM_BUILD_DOCS="OFF" 
+        -DLLVM_ENABLE_OCAMLDOC="OFF" 
+        -DLLVM_ENABLE_THREADS="OFF" 
+        -DLLVM_ENABLE_BACKTRACES="OFF" 
+        -DLLVM_ENABLE_PIC="OFF" 
+        -DLLVM_ENABLE_UNWIND_TABLES="OFF" 
+        -DLLVM_ENABLE_CRASH_OVERRIDES="OFF" 
+        -DLLVM_ENABLE_TERMINFO="OFF" 
+        -DLLVM_ENABLE_LIBXML2="OFF" 
+        -DLLVM_ENABLE_LIBEDIT="OFF" 
+        -DLLVM_ENABLE_LIBPFM="OFF" 
+        -DLLVM_ENABLE_ZLIB="OFF" 
+        -DLLVM_ENABLE_ZSTD="OFF" 
+        -DLLVM_ENABLE_PROJECTS="mlir;llvm" 
+        -DCMAKE_BUILD_TYPE="Release" 
+        -DLLVM_TARGETS_TO_BUILD="WebAssembly" 
+        -DLLVM_TARGET_ARCH="wasm32-wasi" 
+        -DLLVM_DEFAULT_TARGET_TRIPLE="wasm32-wasi" 
+        -DLLVM_HAVE_LIBXAR="OFF" 
+        -DCMAKE_SYSTEM_NAME=Emscripten 
+        -DLLVM_HOST_TRIPLE=x86_64-unknown-linux-gnu 
+        -DCROSS_TOOLCHAIN_FLAGS_NATIVE="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
+        -DCMAKE_EXE_LINKER_FLAGS="-sSTANDALONE_WASM=1 -sWASM=1 -sWASM_BIGINT=1 -sEXPORT_ALL=1 -sMODULARIZE=1 -sEXPORT_NAME=MLIRModule -sEXPORTED_RUNTIME_METHODS=cwrap,ccall,getValue,setValue,writeAsciiToMemory,wasmTable --minify 0 -lembind"
+        -B$PWD/build_mlir_wasm 
+        -S$PWD/llvm-project/llvm
+        
+    - name: build wasm ubuntu wheel
+      if: contains(matrix.ARCH, 'wasm')
+      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
+      run: |
+        
+        cmake --build build_mlir_wasm --target mlir-opt
+        mkdir wheelhouse
+        zip wheelhouse/mlir_wasm-$(python setup.py --mlir-version).zip build_mlir_wasm/bin/*.js build_mlir_wasm/bin/*.wasm -v
+        rm -rf build_mlir_wasm
 
     - name: Clean llvm-project
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
@@ -298,6 +366,7 @@ jobs:
         docker system prune -a -f
 
     - name: Get wheel version
+      if: ${{ !contains(matrix.ARCH, 'wasm') }}
       id: get_wheel_version
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
@@ -348,7 +417,7 @@ jobs:
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       id: build_native_tools_wheel
-      if: ${{ needs.settings.outputs.DEBUG_CI_FAST_BUILD != 'true' }}
+      if: ${{ !contains(matrix.ARCH, 'wasm') && needs.settings.outputs.DEBUG_CI_FAST_BUILD != 'true' }}
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
@@ -380,7 +449,9 @@ jobs:
       if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
       uses: actions/upload-artifact@v3
       with:
-        path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+        path: |
+          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.zip
         name: build_artifact
 
   upload_distro_wheels:
@@ -406,7 +477,7 @@ jobs:
       - name: Release current commit
         uses: ncipollo/release-action@v1.12.0
         with:
-          artifacts: "dist/*.whl,dist/*.tar.xz"
+          artifacts: "dist/*.whl,dist/*.zip"
           token: "${{ secrets.GITHUB_TOKEN }}"
           tag: "latest"
           name: "latest"
@@ -420,7 +491,7 @@ jobs:
         with:
           owner: makslevental
           repo: wheels
-          artifacts: "dist/*.whl"
+          artifacts: "dist/*.whl,dist/*.zip"
           token: "${{ secrets.WHEELS_REPO }}"
           tag: "i"
           name: "i"

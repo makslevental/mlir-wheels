@@ -1,0 +1,11 @@
+diff --git a/mlir/tools/mlir-opt/CMakeLists.txt b/mlir/tools/mlir-opt/CMakeLists.txt
+--- a/mlir/tools/mlir-opt/CMakeLists.txt	(revision 1a8255761dbac6ed4d118d0a7ad6e2994df46673)
++++ b/mlir/tools/mlir-opt/CMakeLists.txt	(date 1717019931607)
+@@ -106,4 +106,6 @@
+ llvm_update_compile_flags(mlir-opt)
+
+ mlir_check_all_link_libraries(mlir-opt)
+-export_executable_symbols_for_plugins(mlir-opt)
++#export_executable_symbols_for_plugins(mlir-opt)
++target_link_options(mlir-opt PUBLIC -Wl,--export-all)
++target_link_options(mlir-opt PUBLIC -Wl,--unresolved-symbols=ignore-all)

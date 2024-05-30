@@ -9,7 +9,6 @@ from distutils.command.install_data import install_data
 from pathlib import Path
 from pprint import pprint
 
-import setuptools
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
@@ -23,50 +22,81 @@ class CMakeExtension(Extension):
 def get_cross_cmake_args():
     cmake_args = {}
 
-    def native_tools():
-        nonlocal cmake_args
-
-        native_tools_dir = Path(sys.prefix).absolute() / "bin"
-        assert native_tools_dir is not None, "native_tools_dir missing"
-        assert os.path.exists(native_tools_dir), "native_tools_dir doesn't exist"
-        cmake_args["LLVM_USE_HOST_TOOLS"] = "ON"
-        cmake_args["LLVM_NATIVE_TOOL_DIR"] = str(native_tools_dir)
-
     CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
     if CIBW_ARCHS in {"arm64", "aarch64", "ARM64"}:
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "AArch64"
     elif CIBW_ARCHS in {"x86_64", "AMD64"}:
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "X86"
+    elif CIBW_ARCHS in {"wasm32"}:
+        cmake_args["LLVM_TARGETS_TO_BUILD"] = "WebAssembly"
+        ARCH = "wasm32-wasi"
     else:
         raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
     if CIBW_ARCHS != platform.machine():
         cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
 
+    cmake_args["LLVM_TARGET_ARCH"] = ARCH
+
     if platform.system() == "Darwin":
         if ARCH == "AArch64":
+            cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
             cmake_args["CMAKE_OSX_ARCHITECTURES"] = "arm64"
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "arm64-apple-darwin21.6.0"
-            cmake_args["LLVM_HOST_TRIPLE"] = "arm64-apple-darwin21.6.0"
-        elif ARCH == "X86":
-            cmake_args["CMAKE_OSX_ARCHITECTURES"] = "x86_64"
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "x86_64-apple-darwin"
-            cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-apple-darwin"
+            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
+                "LLVM_DEFAULT_TARGET_TRIPLE"
+            ] = "arm64-apple-darwin21.6.0"
+            # see llvm/cmake/modules/CrossCompile.cmake:llvm_create_cross_target
+            cmake_args[
+                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
+            ] = "-DCMAKE_C_COMPILER=clang;-DCMAKE_CXX_COMPILER=clang++"
     elif platform.system() == "Linux":
         if ARCH == "AArch64":
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "aarch64-linux-gnu"
-            cmake_args["LLVM_HOST_TRIPLE"] = "aarch64-linux-gnu"
-            cmake_args["CMAKE_C_COMPILER"] = "aarch64-linux-gnu-gcc"
+            cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
             cmake_args["CMAKE_CXX_COMPILER"] = "aarch64-linux-gnu-g++"
             cmake_args["CMAKE_CXX_FLAGS"] = "-static-libgcc -static-libstdc++"
-            native_tools()
-        elif ARCH == "X86":
-            cmake_args["LLVM_DEFAULT_TARGET_TRIPLE"] = "x86_64-unknown-linux-gnu"
-            cmake_args["LLVM_HOST_TRIPLE"] = "x86_64-unknown-linux-gnu"
+            cmake_args["CMAKE_C_COMPILER"] = "aarch64-linux-gnu-gcc"
+            cmake_args[
+                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
+            ] = "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
+            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
+                "LLVM_DEFAULT_TARGET_TRIPLE"
+            ] = "aarch64-linux-gnu"
+        elif ARCH == "wasm32-wasi":
+            cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
+            cmake_args[
+                "CMAKE_EXE_LINKER_FLAGS"
+            ] = "-sSTANDALONE_WASM=1 -sWASM=1 -sWASM_BIGINT=1"
+            cmake_args["CMAKE_SYSTEM_NAME"] = "Emscripten"
+            cmake_args["CMAKE_TOOLCHAIN_FILE"] = os.getenv("CMAKE_TOOLCHAIN_FILE")
+            cmake_args[
+                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
+            ] = "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
+            cmake_args["LLVM_BUILD_DOCS"] = "OFF"
+            cmake_args["LLVM_BUILD_TOOLS"] = "OFF"
+            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
+                "LLVM_DEFAULT_TARGET_TRIPLE"
+            ] = "wasm32-wasi"
+            cmake_args["LLVM_ENABLE_BACKTRACES"] = "OFF"
+            cmake_args["LLVM_ENABLE_BINDINGS"] = "OFF"
+            cmake_args["LLVM_ENABLE_CRASH_OVERRIDES"] = "OFF"
+            cmake_args["LLVM_ENABLE_LIBEDIT"] = "OFF"
+            cmake_args["LLVM_ENABLE_LIBPFM"] = "OFF"
+            cmake_args["LLVM_ENABLE_LIBXML2"] = "OFF"
+            cmake_args["LLVM_ENABLE_OCAMLDOC"] = "OFF"
+            cmake_args["LLVM_ENABLE_PIC"] = "OFF"
+            cmake_args["LLVM_ENABLE_TERMINFO"] = "OFF"
+            cmake_args["LLVM_ENABLE_THREADS"] = "OFF"
+            cmake_args["LLVM_ENABLE_UNWIND_TABLES"] = "OFF"
+            cmake_args["LLVM_ENABLE_ZLIB"] = "OFF"
+            cmake_args["LLVM_ENABLE_ZSTD"] = "OFF"
+            cmake_args["LLVM_HAVE_LIBXAR"] = "OFF"
+            cmake_args["LLVM_INCLUDE_BENCHMARKS"] = "OFF"
+            cmake_args["LLVM_INCLUDE_EXAMPLES"] = "OFF"
+            cmake_args["LLVM_INCLUDE_TESTS"] = "OFF"
+            cmake_args["LLVM_INCLUDE_UTILS"] = "OFF"
+            cmake_args["LLVM_TARGETS_TO_BUILD"] = "WebAssembly"
 
     if BUILD_CUDA:
         cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
-
-    cmake_args["LLVM_TARGET_ARCH"] = ARCH
 
     return cmake_args
 
@@ -120,7 +150,6 @@ class CMakeBuild(build_ext):
             "-DLLVM_INSTALL_UTILS=ON",
             "-DLLVM_ENABLE_WARNINGS=ON",
             "-DMLIR_BUILD_MLIR_C_DYLIB=1",
-            "-DMLIR_ENABLE_BINDINGS_PYTHON=ON",
             "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
             "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
             f"-DMLIR_INCLUDE_INTEGRATION_TESTS={RUN_TESTS}",
@@ -152,6 +181,8 @@ class CMakeBuild(build_ext):
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
+        if "WebAssembly" not in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]:
+            cmake_args += ["-DMLIR_ENABLE_BINDINGS_PYTHON=ON"]
 
         LLVM_ENABLE_PROJECTS = "llvm;mlir"
 
@@ -316,6 +347,10 @@ if local_version:
     version += ".".join(local_version + [commit_hash])
 else:
     version += commit_hash
+
+if len(sys.argv) > 1 and sys.argv[1] == "--mlir-version":
+    print(version)
+    exit()
 
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 
