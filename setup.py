@@ -29,8 +29,9 @@ def get_cross_cmake_args():
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "X86"
     else:
         raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
-    if CIBW_ARCHS != platform.machine():
-        cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
+        
+    # if CIBW_ARCHS != platform.machine():
+    cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
 
     cmake_args["LLVM_TARGET_ARCH"] = ARCH
 
