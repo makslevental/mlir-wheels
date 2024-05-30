@@ -348,7 +348,8 @@ jobs:
         
         cmake --build build_mlir_wasm --target mlir-opt
         mkdir wheelhouse
-        zip wheelhouse/mlir_wasm.zip build_mlir_wasm/bin/*.js build_mlir_wasm/bin/*.wasm -v
+        zip wheelhouse/mlir_wasm-$(python setup.py --mlir-version).zip build_mlir_wasm/bin/*.js build_mlir_wasm/bin/*.wasm -v
+        rm -rf build_mlir_wasm
 
     - name: Clean llvm-project
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}

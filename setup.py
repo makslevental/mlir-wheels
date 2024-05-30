@@ -9,7 +9,6 @@ from distutils.command.install_data import install_data
 from pathlib import Path
 from pprint import pprint
 
-import setuptools
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
@@ -348,6 +347,10 @@ if local_version:
     version += ".".join(local_version + [commit_hash])
 else:
     version += commit_hash
+
+if len(sys.argv) > 1 and sys.argv[1] == "--mlir-version":
+    print(version)
+    exit()
 
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
 
