@@ -157,13 +157,13 @@ jobs:
             ARCH: x86_64
             BUILD_CUDA: true
 
-          - OS: ubuntu-20.04
-            ARCH: x86_64
-            BUILD_VULKAN: true
+#          - OS: ubuntu-20.04
+#            ARCH: x86_64
+#            BUILD_VULKAN: true
 
-          - OS: ubuntu-20.04
-            ARCH: x86_64
-            BUILD_OPENMP: true
+#          - OS: ubuntu-20.04
+#            ARCH: x86_64
+#            BUILD_OPENMP: true
 
           - OS: windows-2019
             ARCH: AMD64
@@ -174,13 +174,13 @@ jobs:
           - OS: macos-12
             ARCH: arm64
 
-          - OS: macos-12
-            ARCH: arm64
-            BUILD_VULKAN: true
-
-          - OS: macos-12
-            ARCH: arm64
-            BUILD_OPENMP: true
+#          - OS: macos-12
+#            ARCH: arm64
+#            BUILD_VULKAN: true
+#
+#          - OS: macos-12
+#            ARCH: arm64
+#            BUILD_OPENMP: true
 
     defaults:
       run:
@@ -511,7 +511,7 @@ jobs:
       id-token: write
 
     # DON'T FORGET TO CHANGE THIS IF YOU UPDATE WHEELS.YML
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@clang_lld
     secrets: inherit # pass all secrets
     with:
       MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}
