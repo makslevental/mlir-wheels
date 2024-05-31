@@ -27,13 +27,11 @@ def get_cross_cmake_args():
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "AArch64"
     elif CIBW_ARCHS in {"x86_64", "AMD64"}:
         ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "X86"
-    elif CIBW_ARCHS in {"wasm32"}:
-        cmake_args["LLVM_TARGETS_TO_BUILD"] = "WebAssembly"
-        ARCH = "wasm32-wasi"
     else:
         raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
-    if CIBW_ARCHS != platform.machine():
-        cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
+        
+    # if CIBW_ARCHS != platform.machine():
+    cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
 
     cmake_args["LLVM_TARGET_ARCH"] = ARCH
 
@@ -60,40 +58,6 @@ def get_cross_cmake_args():
             cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
                 "LLVM_DEFAULT_TARGET_TRIPLE"
             ] = "aarch64-linux-gnu"
-        elif ARCH == "wasm32-wasi":
-            cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
-            cmake_args[
-                "CMAKE_EXE_LINKER_FLAGS"
-            ] = "-sSTANDALONE_WASM=1 -sWASM=1 -sWASM_BIGINT=1"
-            cmake_args["CMAKE_SYSTEM_NAME"] = "Emscripten"
-            cmake_args["CMAKE_TOOLCHAIN_FILE"] = os.getenv("CMAKE_TOOLCHAIN_FILE")
-            cmake_args[
-                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
-            ] = "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
-            cmake_args["LLVM_BUILD_DOCS"] = "OFF"
-            cmake_args["LLVM_BUILD_TOOLS"] = "OFF"
-            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
-                "LLVM_DEFAULT_TARGET_TRIPLE"
-            ] = "wasm32-wasi"
-            cmake_args["LLVM_ENABLE_BACKTRACES"] = "OFF"
-            cmake_args["LLVM_ENABLE_BINDINGS"] = "OFF"
-            cmake_args["LLVM_ENABLE_CRASH_OVERRIDES"] = "OFF"
-            cmake_args["LLVM_ENABLE_LIBEDIT"] = "OFF"
-            cmake_args["LLVM_ENABLE_LIBPFM"] = "OFF"
-            cmake_args["LLVM_ENABLE_LIBXML2"] = "OFF"
-            cmake_args["LLVM_ENABLE_OCAMLDOC"] = "OFF"
-            cmake_args["LLVM_ENABLE_PIC"] = "OFF"
-            cmake_args["LLVM_ENABLE_TERMINFO"] = "OFF"
-            cmake_args["LLVM_ENABLE_THREADS"] = "OFF"
-            cmake_args["LLVM_ENABLE_UNWIND_TABLES"] = "OFF"
-            cmake_args["LLVM_ENABLE_ZLIB"] = "OFF"
-            cmake_args["LLVM_ENABLE_ZSTD"] = "OFF"
-            cmake_args["LLVM_HAVE_LIBXAR"] = "OFF"
-            cmake_args["LLVM_INCLUDE_BENCHMARKS"] = "OFF"
-            cmake_args["LLVM_INCLUDE_EXAMPLES"] = "OFF"
-            cmake_args["LLVM_INCLUDE_TESTS"] = "OFF"
-            cmake_args["LLVM_INCLUDE_UTILS"] = "OFF"
-            cmake_args["LLVM_TARGETS_TO_BUILD"] = "WebAssembly"
 
     if BUILD_CUDA:
         cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
@@ -121,7 +85,7 @@ class CMakeBuild(build_ext):
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
 
-        RUN_TESTS = 1 if check_env("RUN_TESTS") else 0
+        RUN_TESTS = "ON" if check_env("RUN_TESTS") else "OFF"
         # make windows happy
         PYTHON_EXECUTABLE = str(Path(sys.executable))
         if platform.system() == "Windows":
@@ -130,90 +94,18 @@ class CMakeBuild(build_ext):
         cmake_args = [
             f"-B{build_temp}",
             f"-G {cmake_generator}",
-            "-DBUILD_SHARED_LIBS=OFF",
-            "-DLLVM_BUILD_BENCHMARKS=OFF",
-            "-DLLVM_BUILD_EXAMPLES=OFF",
-            "-DLLVM_BUILD_RUNTIMES=OFF",
-            f"-DLLVM_BUILD_TESTS={RUN_TESTS}",
-            "-DLLVM_BUILD_TOOLS=ON",
-            "-DLLVM_BUILD_UTILS=ON",
-            "-DLLVM_CCACHE_BUILD=ON",
-            "-DLLVM_ENABLE_ASSERTIONS=ON",
-            "-DLLVM_ENABLE_RTTI=ON",
-            "-DLLVM_ENABLE_ZSTD=OFF",
-            "-DLLVM_INCLUDE_BENCHMARKS=OFF",
-            "-DLLVM_INCLUDE_EXAMPLES=OFF",
-            "-DLLVM_INCLUDE_RUNTIMES=OFF",
-            f"-DLLVM_INCLUDE_TESTS={RUN_TESTS}",
-            "-DLLVM_INCLUDE_TOOLS=ON",
-            "-DLLVM_INCLUDE_UTILS=ON",
-            "-DLLVM_INSTALL_UTILS=ON",
-            "-DLLVM_ENABLE_WARNINGS=ON",
-            "-DMLIR_BUILD_MLIR_C_DYLIB=1",
-            "-DMLIR_ENABLE_EXECUTION_ENGINE=ON",
-            "-DMLIR_ENABLE_SPIRV_CPU_RUNNER=ON",
-            f"-DMLIR_INCLUDE_INTEGRATION_TESTS={RUN_TESTS}",
-            f"-DMLIR_INCLUDE_TESTS={RUN_TESTS}",
-            # get rid of that annoying af git on the end of .17git
-            "-DLLVM_VERSION_SUFFIX=",
-            # Disables generation of "version soname" (i.e. libFoo.so.<version>), which
-            # causes pure duplication of various shlibs for Python wheels.
-            "-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            # prevent symbol collision that leads to multiple pass registration and such
-            "-DCMAKE_VISIBILITY_INLINES_HIDDEN=ON",
-            "-DCMAKE_C_VISIBILITY_PRESET=hidden",
-            "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
+            f"-DRUN_TESTS={RUN_TESTS}",
+            f"-DBUILD_CUDA={BUILD_CUDA}",
+            f"-DBUILD_VULKAN={BUILD_VULKAN}",
+            f"-DBUILD_OPENMP={BUILD_OPENMP}",
         ]
-        if platform.system() == "Windows":
-            cmake_args += [
-                "-DCMAKE_C_COMPILER=cl",
-                "-DCMAKE_CXX_COMPILER=cl",
-                "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
-                "-DCMAKE_C_FLAGS=/MT",
-                "-DCMAKE_CXX_FLAGS=/MT",
-                "-DLLVM_USE_CRT_MINSIZEREL=MT",
-                "-DLLVM_USE_CRT_RELEASE=MT",
-            ]
 
         cmake_args_dict = get_cross_cmake_args()
         cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
-        if "WebAssembly" not in cmake_args_dict["LLVM_TARGETS_TO_BUILD"]:
-            cmake_args += ["-DMLIR_ENABLE_BINDINGS_PYTHON=ON"]
-
-        LLVM_ENABLE_PROJECTS = "llvm;mlir"
-
-        if BUILD_CUDA:
-            cmake_args += [
-                "-DMLIR_ENABLE_CUDA_RUNNER=ON",
-                "-DMLIR_ENABLE_CUDA_CONVERSIONS=ON",
-                "-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc",
-                "-DCUDAToolkit_ROOT=/usr/local/cuda",
-            ]
-
-        if BUILD_VULKAN:
-            cmake_args += ["-DMLIR_ENABLE_VULKAN_RUNNER=ON"]
-            if platform.system() == "Darwin":
-                vulkan_library = "/usr/local/lib/libvulkan.dylib"
-            elif platform.system() == "Linux":
-                vulkan_library = "/usr/local/lib64/libvulkan.so"
-            else:
-                raise ValueError(f"unknown location for vulkan lib")
-            cmake_args += [f"-DVulkan_LIBRARY={vulkan_library}"]
-
-        if BUILD_OPENMP:
-            cmake_args += [
-                "-DENABLE_CHECK_TARGETS=OFF",
-                "-DLIBOMP_OMPD_GDB_SUPPORT=OFF",
-                "-DLIBOMP_USE_QUAD_PRECISION=False",
-                "-DOPENMP_ENABLE_LIBOMPTARGET=OFF",
-            ]
-            LLVM_ENABLE_PROJECTS += ";openmp"
-
-        cmake_args += [f"-DLLVM_ENABLE_PROJECTS={LLVM_ENABLE_PROJECTS}"]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
@@ -261,6 +153,10 @@ class CMakeBuild(build_ext):
             build_args += [f"-j{str(2 * os.cpu_count())}"]
         else:
             build_args += [f"-j{os.environ.get('PARALLEL_LEVEL')}"]
+
+        config_cmake = Path(__file__).parent.resolve() / "config.cmake"
+        assert config_cmake.exists()
+        cmake_args.append(f"-C {config_cmake}")
 
         print("ENV", pprint(os.environ), file=sys.stderr)
         print("CMAKE_ARGS", cmake_args, file=sys.stderr)

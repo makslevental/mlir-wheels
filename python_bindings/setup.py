@@ -184,6 +184,15 @@ class CMakeBuild(build_ext):
         )
 
 
+if len(sys.argv) > 1 and sys.argv[1] == "--plat":
+    if os.getenv("CIBW_ARCHS") == "x86_64":
+        print("manylinux_2_28_x86_64")
+    elif os.getenv("CIBW_ARCHS") == "aarch64":
+        print("manylinux_2_35_aarch64")
+    else:
+        raise NotImplementedError
+    exit()
+
 BUILD_CUDA = check_env("BUILD_CUDA")
 BUILD_VULKAN = check_env("BUILD_VULKAN")
 
