@@ -110,16 +110,6 @@ class CMakeBuild(build_ext):
                 "-DCUDAToolkit_ROOT=/usr/local/cuda",
             ]
 
-        if BUILD_VULKAN:
-            cmake_args += ["-DMLIR_ENABLE_VULKAN_RUNNER=ON"]
-            if platform.system() == "Darwin":
-                vulkan_library = "/usr/local/lib/libvulkan.dylib"
-            elif platform.system() == "Linux":
-                vulkan_library = "/usr/local/lib64/libvulkan.so"
-            else:
-                raise ValueError(f"unknown location for vulkan lib")
-            cmake_args += [f"-DVulkan_LIBRARY={vulkan_library}"]
-
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
@@ -194,7 +184,6 @@ if len(sys.argv) > 1 and sys.argv[1] == "--plat":
     exit()
 
 BUILD_CUDA = check_env("BUILD_CUDA")
-BUILD_VULKAN = check_env("BUILD_VULKAN")
 
 version = version("mlir")
 

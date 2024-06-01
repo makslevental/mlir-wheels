@@ -13,8 +13,6 @@ build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
 skip = ["*-manylinux_i686", "*-musllinux*"]
 environment-pass = [
     "BUILD_CUDA",
-    "BUILD_OPENMP",
-    "BUILD_VULKAN",
     "CIBW_ARCHS",
     "CMAKE_ARGS",
     "CMAKE_GENERATOR",
@@ -28,32 +26,42 @@ environment-pass = [
 ]
 before-build = [
     "{project}/scripts/docker_prepare_ccache.sh",
-#    "{project}/scripts/install_cuda.sh",
-    "{project}/scripts/install_vulkan.sh",
     "pip install -r requirements.txt",
     "{project}/scripts/pip_install_mlir.sh",
 ]
 repair-wheel-command = [
-    'ls -lh',
     'PLAT=$(python setup.py --plat)',
-    'LD_LIBRARY_PATH=$(python -c "import mlir; print(mlir.__path__[0])")/lib auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1 --plat $PLAT'
+    'echo LD_LIBRARY_PATH=$LD_LIBRARY_PATH',
+    'LD_LIBRARY_PATH=$(python -c "import mlir; print(mlir.__path__[0])")/lib',
+    'auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --plat $PLAT'
 ]
 
 [tool.cibuildwheel.macos]
 build = "cp310-* cp311-* cp312-*"
 before-build = [
-    "{project}/scripts/install_vulkan.sh",
     "pip install -r requirements.txt",
     "{project}/scripts/pip_install_mlir.sh",
 ]
+# DYLD_LIBRARY_PATH doesn't work because eg dep on libLLVM is set to @loader_path/libLLVM and
+# delocate will not look in env paths in that case
+# https://github.com/matthew-brett/delocate/blob/f6af44562dd90d0f9279ab77abeab607ee9c2ee0/delocate/libsana.py#L519
+# https://github.com/matthew-brett/delocate/blob/f6af44562dd90d0f9279ab77abeab607ee9c2ee0/delocate/libsana.py#L592
+# https://github.com/matthew-brett/delocate/blob/f6af44562dd90d0f9279ab77abeab607ee9c2ee0/delocate/tools.py#L784
 repair-wheel-command = [
-    'DYLD_FALLBACK_LIBRARY_PATH=$(python -c "import mlir; print(mlir.__path__[0])")/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}  --ignore-missing-dependencies'
+    # libmlir_float16 has a dep on libLLVM that's loader_path so it can't be found
+    # libMLIRPythonCAPI has a dep on libLLVM that's rpath so that gets found correctly and gets put some place where it can be found
+    # by default .dylibs so we are lucky - copy that to _mlir_libs so it can satisfy libmlir_float16
+    # note, libs dir is relative to wheel dir not package as the docs imply
+    # https://github.com/matthew-brett/delocate/blob/f6af44562dd90d0f9279ab77abeab607ee9c2ee0/delocate/delocating.py#L976
+    # 'DYLD_LIBRARY_PATH=$(python -c "import mlir; print(mlir.__path__[0])")/lib',
+    # --------
+    # scratch all this and just copy libLLVM during build/install
+    'delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}'
 ]
 
 [tool.cibuildwheel.windows]
 build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
 before-build = [
-    "bash {project}\\scripts\\install_vulkan.sh",
     "pip install delvewheel",
     "pip install -r requirements.txt",
     "bash {project}\\scripts\\pip_install_mlir.sh",
