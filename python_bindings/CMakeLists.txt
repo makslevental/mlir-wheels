@@ -108,7 +108,6 @@ set(_runtimes
   mlir_c_runner_utils
   mlir_float16_utils
   mlir_runner_utils
-  LLVM
 )
 
 # this isn't a runtime but it's a dep of everything now
