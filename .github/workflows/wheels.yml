@@ -267,9 +267,103 @@ jobs:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
           name: build_artifact_python_bindings
 
-  upload_bindings_wheels:
+  test-against-mlir-python-extras:
 
     needs: [build, build-linux-aarch64]
+
+    runs-on: ${{ matrix.OS }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+
+          - OS: ubuntu-22.04
+            ARCH: aarch64
+
+          - OS: windows-2019
+            ARCH: AMD64
+
+          - OS: macos-12
+            ARCH: x86_64
+
+          - OS: macos-14
+            ARCH: arm64
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: llvm/llvm-project
+          sparse-checkout: mlir/test/python/dialects
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: build_artifact_python_bindings
+          path: wheelhouse
+
+
+      - name: Install, configure, and test
+        if: ${{ !contains(matrix.OS, 'ubuntu') || !contains(matrix.ARCH, 'aarch64') }}
+        run: |
+          
+          pip install mlir-python-bindings numpy -v -f wheelhouse
+          cd mlir/test/python/dialects
+          for f in *.py; do
+            if [[ "$f" == "python_test.py" ]]; then
+              continue
+            fi
+            python $f
+          done
+
+      - name: Install, configure, and test
+        if: ${{ contains(matrix.OS, 'ubuntu') && contains(matrix.ARCH, 'aarch64') }}
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: aarch64
+          distro: ubuntu20.04
+          dockerRunArgs: --volume "${{ github.workspace }}:/workspace"
+          install: |
+            
+            apt-get update -q -y
+            apt-get install -y wget
+            
+            mkdir -p ~/miniconda3
+            wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O miniconda.sh
+            bash miniconda.sh -b -u -p /root/miniconda3
+            eval "$(/root/miniconda3/bin/conda shell.bash hook)"
+            conda init
+
+          run: |
+            
+            cd /workspace
+            
+            eval "$(/root/miniconda3/bin/conda shell.bash hook)"
+            conda create -n env -q -y -c conda-forge/label/python_rc python=3.10
+            conda activate env
+            
+            pip install mlir-python-bindings numpy -v -f wheelhouse
+            cd mlir/test/python/dialects
+            for f in *.py; do
+              if [[ "$f" == "python_test.py" ]]; then
+                continue
+              fi
+              python $f
+            done
+
+  upload_bindings_wheels:
+
+    needs: [build, build-linux-aarch64, test-against-mlir-python-extras]
 
     runs-on: ubuntu-latest
 

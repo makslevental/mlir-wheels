@@ -19,52 +19,6 @@ class CMakeExtension(Extension):
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
 
 
-def get_cross_cmake_args():
-    cmake_args = {}
-
-    CIBW_ARCHS = os.environ.get("CIBW_ARCHS")
-    if CIBW_ARCHS in {"arm64", "aarch64", "ARM64"}:
-        ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "AArch64"
-    elif CIBW_ARCHS in {"x86_64", "AMD64"}:
-        ARCH = cmake_args["LLVM_TARGETS_TO_BUILD"] = "X86"
-    else:
-        raise ValueError(f"unknown CIBW_ARCHS={CIBW_ARCHS}")
-        
-    # if CIBW_ARCHS != platform.machine():
-    cmake_args["CMAKE_SYSTEM_NAME"] = platform.system()
-
-    cmake_args["LLVM_TARGET_ARCH"] = ARCH
-
-    if platform.system() == "Darwin":
-        if ARCH == "AArch64":
-            cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
-            cmake_args["CMAKE_OSX_ARCHITECTURES"] = "arm64"
-            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
-                "LLVM_DEFAULT_TARGET_TRIPLE"
-            ] = "arm64-apple-darwin21.6.0"
-            # see llvm/cmake/modules/CrossCompile.cmake:llvm_create_cross_target
-            cmake_args[
-                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
-            ] = "-DCMAKE_C_COMPILER=clang;-DCMAKE_CXX_COMPILER=clang++"
-    elif platform.system() == "Linux":
-        if ARCH == "AArch64":
-            cmake_args["CMAKE_CROSSCOMPILING"] = "ON"
-            cmake_args["CMAKE_CXX_COMPILER"] = "aarch64-linux-gnu-g++"
-            cmake_args["CMAKE_CXX_FLAGS"] = "-static-libgcc -static-libstdc++"
-            cmake_args["CMAKE_C_COMPILER"] = "aarch64-linux-gnu-gcc"
-            cmake_args[
-                "CROSS_TOOLCHAIN_FLAGS_NATIVE:STRING"
-            ] = "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
-            cmake_args["LLVM_HOST_TRIPLE"] = cmake_args[
-                "LLVM_DEFAULT_TARGET_TRIPLE"
-            ] = "aarch64-linux-gnu"
-
-    if BUILD_CUDA:
-        cmake_args["LLVM_TARGETS_TO_BUILD"] += ";NVPTX"
-
-    return cmake_args
-
-
 class MyInstallData(install_data):
     def run(self):
         self.mkpath(self.install_dir)
@@ -94,18 +48,20 @@ class CMakeBuild(build_ext):
         cmake_args = [
             f"-B{build_temp}",
             f"-G {cmake_generator}",
+            f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
+            f"-DCMAKE_SYSTEM_NAME={platform.system()}",
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
-            f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            f"-DRUN_TESTS={RUN_TESTS}",
+            # custom
             f"-DBUILD_CUDA={BUILD_CUDA}",
-            f"-DBUILD_VULKAN={BUILD_VULKAN}",
             f"-DBUILD_OPENMP={BUILD_OPENMP}",
+            f"-DBUILD_VULKAN={BUILD_VULKAN}",
+            f"-DCIBW_ARCHS={os.getenv('CIBW_ARCHS')}",
+            f"-DRUN_TESTS={RUN_TESTS}",
         ]
 
-        cmake_args_dict = get_cross_cmake_args()
-        cmake_args += [f"-D{k}={v}" for k, v in cmake_args_dict.items()]
+        cmake_args += []
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
