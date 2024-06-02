@@ -502,7 +502,7 @@ jobs:
 
   call-build-python-bindings:
 
-    needs: [settings, upload_distro_wheels]
+    needs: [build, settings, upload_distro_wheels]
     
     if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
 

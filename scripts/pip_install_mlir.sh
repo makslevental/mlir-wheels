@@ -5,6 +5,8 @@ export PIP_FIND_LINKS="wheelhouse https://github.com/makslevental/mlir-wheels/re
 
 SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
 
+pip cache purge
+
 if [ ! -z "$MLIR_WHEEL_VERSION" ]; then
   pip install mlir-native-tools==$MLIR_WHEEL_VERSION --force -U
 
@@ -13,12 +15,6 @@ if [ ! -z "$MLIR_WHEEL_VERSION" ]; then
   LOCAL_VERSION=""
   if [ x"$BUILD_CUDA" == x"true" ]; then
     LOCAL_VERSION="$LOCAL_VERSION cuda"
-  fi
-  if [ x"$BUILD_VULKAN" == x"true" ]; then
-    LOCAL_VERSION="$LOCAL_VERSION vulkan"
-  fi
-  if [ x"$BUILD_OPENMP" == x"true" ]; then
-    LOCAL_VERSION="$LOCAL_VERSION openmp"
   fi
   LOCAL_VERSION="$LOCAL_VERSION $HASH"
   LOCAL_VERSION=$(echo $LOCAL_VERSION | tr ' ' '.')

@@ -33,7 +33,8 @@ repair-wheel-command = [
     'PLAT=$(python setup.py --plat)',
     'echo LD_LIBRARY_PATH=$LD_LIBRARY_PATH',
     'LD_LIBRARY_PATH=$(python -c "import mlir; print(mlir.__path__[0])")/lib',
-    'auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --plat $PLAT'
+    'auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --plat $PLAT',
+    "pip uninstall -y mlir"
 ]
 
 [tool.cibuildwheel.macos]
