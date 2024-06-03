@@ -347,6 +347,8 @@ jobs:
           run: |
             
             cd /workspace
+            ls -lh
+            ls -lh wheelhouse
             
             eval "$(/root/miniconda3/bin/conda shell.bash hook)"
             conda create -n env -q -y -c conda-forge/label/python_rc python=3.10
