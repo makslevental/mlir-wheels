@@ -354,7 +354,7 @@ jobs:
             conda create -n env -q -y -c conda-forge/label/python_rc python=3.10
             conda activate env
             
-            pip install mlir-python-bindings numpy -v -f wheelhouse
+            pip install mlir-python-bindings numpy -v -f .
             cd mlir/test/python/dialects
             for f in *.py; do
               if [[ "$f" == "python_test.py" ]]; then
