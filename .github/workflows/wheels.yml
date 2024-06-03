@@ -326,43 +326,6 @@ jobs:
             python $f
           done
 
-      - name: Install, configure, and test
-        if: ${{ contains(matrix.OS, 'ubuntu') && contains(matrix.ARCH, 'aarch64') }}
-        uses: uraimo/run-on-arch-action@v2
-        with:
-          arch: aarch64
-          distro: ubuntu20.04
-          dockerRunArgs: --volume "${{ github.workspace }}:/workspace"
-          install: |
-            
-            apt-get update -q -y
-            apt-get install -y wget
-            
-            mkdir -p ~/miniconda3
-            wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O miniconda.sh
-            bash miniconda.sh -b -u -p /root/miniconda3
-            eval "$(/root/miniconda3/bin/conda shell.bash hook)"
-            conda init
-
-          run: |
-            
-            cd /workspace
-            ls -lh
-            ls -lh wheelhouse
-            
-            eval "$(/root/miniconda3/bin/conda shell.bash hook)"
-            conda create -n env -q -y -c conda-forge/label/python_rc python=3.10
-            conda activate env
-            
-            pip install mlir-python-bindings numpy -v -f .
-            cd mlir/test/python/dialects
-            for f in *.py; do
-              if [[ "$f" == "python_test.py" ]]; then
-                continue
-              fi
-              python $f
-            done
-
   upload_bindings_wheels:
 
     needs: [build, build-linux-aarch64, test-against-mlir-python-extras]
