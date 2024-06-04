@@ -133,7 +133,13 @@ set(LLVM_ENABLE_Z3_SOLVER OFF CACHE BOOL "")
 set(LLVM_INCLUDE_DOCS OFF CACHE BOOL "")
 set(LLVM_INCLUDE_GO_TESTS OFF CACHE BOOL "")
 
-# Aborted (core dumped)
+# malloc(): corrupted top size
+# LLVM_ENABLE_ASSERTIONS=ON makes [NDEBUG un-defined](https://github.com/shark-infra/llvm-project/blob/32b91ec395529ef7ad8b5520fe692464f7512b41/llvm/cmake/modules/HandleLLVMOptions.cmake#L121)
+# In IREE that would require [IREE_ENABLE_ASSERTIONS=ON](https://github.com/iree-org/iree/blob/3d6a8ee260be3f32614aa18207d5a35c81f86401/CMakeLists.txt#L516)
+#
+# Because of https://github.com/iree-org/iree/blob/112fad0047bdaa6595387afd9791f3027913d56b/compiler/src/iree/compiler/Dialect/Util/Transforms/FoldGlobals.cpp#L523-L526
+# and https://github.com/shark-infra/llvm-project/blob/9144e4933463d35df259ca8a5207119e1fc0c97c/llvm/include/llvm/ADT/Statistic.h#L38
+# just set LLVM_FORCE_ENABLE_STATS and eat the cost for the sake of simplicity
 set(LLVM_FORCE_ENABLE_STATS ON CACHE BOOL "")
 
 get_cmake_property(_variableNames VARIABLES)
