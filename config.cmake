@@ -85,7 +85,7 @@ if(BUILD_CUDA)
   set(MLIR_ENABLE_CUDA_CONVERSIONS ON CACHE BOOL "")
   set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc CACHE STRING "")
   set(CUDAToolkit_ROOT /usr/local/cuda CACHE STRING "")
-  list(APPEND LLVM_TARGETS_TO_BUILD "NVPTX")
+  set(LLVM_TARGETS_TO_BUILD "X86;NVPTX")
 endif()
 
 option(BUILD_VULKAN "" OFF)
