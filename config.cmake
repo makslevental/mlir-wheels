@@ -55,7 +55,6 @@ else()
   message(FATAL_ERROR "Unrecognized CIBW_ARCHS=${CIBW_ARCHS}")
 endif()
 
-set(LLVM_TARGETS_TO_BUILD ${ARCH} CACHE STRING "")
 set(LLVM_TARGET_ARCH ${ARCH} CACHE STRING "")
 
 # probably i'm doing this wrong and i should be reading CMAKE_HOST_SYSTEM_PROCESSOR
@@ -85,7 +84,9 @@ if(BUILD_CUDA)
   set(MLIR_ENABLE_CUDA_CONVERSIONS ON CACHE BOOL "")
   set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc CACHE STRING "")
   set(CUDAToolkit_ROOT /usr/local/cuda CACHE STRING "")
-  set(LLVM_TARGETS_TO_BUILD "X86;NVPTX")
+  set(LLVM_TARGETS_TO_BUILD "X86;NVPTX" CACHE STRING "")
+else()
+  set(LLVM_TARGETS_TO_BUILD ${ARCH} CACHE STRING "")
 endif()
 
 option(BUILD_VULKAN "" OFF)
