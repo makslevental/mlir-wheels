@@ -56,6 +56,7 @@ else()
 endif()
 
 set(LLVM_TARGET_ARCH ${ARCH} CACHE STRING "")
+set(_llvm_targets_to_build X86)
 
 # probably i'm doing this wrong and i should be reading CMAKE_HOST_SYSTEM_PROCESSOR
 if(ARCH STREQUAL "AArch64")
@@ -84,10 +85,12 @@ if(BUILD_CUDA)
   set(MLIR_ENABLE_CUDA_CONVERSIONS ON CACHE BOOL "")
   set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc CACHE STRING "")
   set(CUDAToolkit_ROOT /usr/local/cuda CACHE STRING "")
-  set(LLVM_TARGETS_TO_BUILD "X86;NVPTX" CACHE STRING "")
-else()
-  set(LLVM_TARGETS_TO_BUILD ${ARCH} CACHE STRING "")
+  list(APPEND _llvm_targets_to_build NVPTX)
 endif()
+
+# for some reason if you set a CACHE var twice it actually creates two of them
+# and they're not _both_ respected (llvm wasn't building NVPTX...)
+set(LLVM_TARGETS_TO_BUILD ${_llvm_targets_to_build} CACHE STRING "")
 
 option(BUILD_VULKAN "" OFF)
 if(BUILD_VULKAN)
@@ -100,15 +103,6 @@ if(BUILD_VULKAN)
     message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} not supported with BUILD_VULKAN")
   endif()
   set(Vulkan_LIBRARY ${vulkan_library} CACHE STRING "")
-endif()
-
-option(BUILD_OPENMP "" OFF)
-if(BUILD_OPENMP)
-  list(APPEND LLVM_ENABLE_PROJECTS openmp)
-  set(ENABLE_CHECK_TARGETS OFF CACHE BOOL "")
-  set(LIBOMP_OMPD_GDB_SUPPORT OFF CACHE BOOL "")
-  set(LIBOMP_USE_QUAD_PRECISION False CACHE BOOL "")
-  set(OPENMP_ENABLE_LIBOMPTARGET OFF CACHE BOOL "")
 endif()
 
 # iree compat
