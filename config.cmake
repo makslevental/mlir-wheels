@@ -56,7 +56,7 @@ else()
 endif()
 
 set(LLVM_TARGET_ARCH ${ARCH} CACHE STRING "")
-set(_llvm_targets_to_build X86)
+set(_llvm_targets_to_build ${ARCH})
 
 # probably i'm doing this wrong and i should be reading CMAKE_HOST_SYSTEM_PROCESSOR
 if(ARCH STREQUAL "AArch64")
