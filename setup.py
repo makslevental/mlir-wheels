@@ -211,7 +211,7 @@ if not build_temp.exists():
     build_temp.mkdir(parents=True)
 
 EXE_EXT = ".exe" if platform.system() == "Windows" else ""
-if not check_env("DEBUG_CI_FAST_BUILD"):
+if not check_env("DEBUG_CI_FAST_BUILD") and not BUILD_CUDA:
     exes = [
         "mlir-cpu-runner",
         "mlir-opt",
