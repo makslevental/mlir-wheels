@@ -72,7 +72,8 @@ if(ARCH STREQUAL "AArch64")
     set(LLVM_DEFAULT_TARGET_TRIPLE "aarch64-linux-gnu" CACHE STRING "")
     # see llvm/cmake/modules/CrossCompile.cmake:llvm_create_cross_target
     set(CROSS_TOOLCHAIN_FLAGS_NATIVE "-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++" CACHE STRING "")
-    # obv this presume this toolchain (i.e. sudo apt-get install -y binutils-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-aarch64-linux-gnu)
+    # obv this presume this toolchain (i.e. sudo apt-get install -y binutils-aarch64-linux-gnu g++-aarch64-linux-gnu
+    # gcc-aarch64-linux-gnu)
     set(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++" CACHE STRING "")
     set(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc" CACHE STRING "")
     list(APPEND CMAKE_CXX_FLAGS "-static-libgcc" "-static-libstdc++")
@@ -85,6 +86,10 @@ if(BUILD_CUDA)
   set(MLIR_ENABLE_CUDA_CONVERSIONS ON CACHE BOOL "")
   set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc CACHE STRING "")
   set(CUDAToolkit_ROOT /usr/local/cuda CACHE STRING "")
+  set(_cuda_lib_paths
+      /usr/local/cuda/lib64/lib/x86_64-linux-gnu /usr/local/cuda/lib64/lib/x64 /usr/local/cuda/lib64/lib64
+      /usr/local/cuda/lib64/lib /usr/local/cuda/lib64/lib64/stubs /usr/local/cuda/lib64/lib/stubs /usr/local/cuda/lib64)
+  set(CMAKE_LIBRARY_PATH ${_cuda_lib_paths} CACHE STRING "")
   list(APPEND _llvm_targets_to_build NVPTX)
 endif()
 
@@ -138,5 +143,5 @@ set(LLVM_INCLUDE_GO_TESTS OFF CACHE BOOL "")
 set(LLVM_FORCE_ENABLE_STATS ON CACHE BOOL "")
 
 get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
+list(SORT _variableNames)
 cmake_print_variables(${_variableNames})

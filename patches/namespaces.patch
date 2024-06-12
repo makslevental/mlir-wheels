@@ -1,0 +1,20 @@
+diff --git a/llvm/cmake/modules/LLVMDistributionSupport.cmake b/llvm/cmake/modules/LLVMDistributionSupport.cmake
+index 526f36dcda83..9a90c99a10b5 100644
+--- a/llvm/cmake/modules/LLVMDistributionSupport.cmake
++++ b/llvm/cmake/modules/LLVMDistributionSupport.cmake
+@@ -197,6 +197,7 @@ function(install_distribution_exports project)
+     get_property(has_exports GLOBAL PROPERTY ${project_upper}_HAS_EXPORTS)
+     if(has_exports)
+       install(EXPORT ${project}${suffix} DESTINATION "${destination}"
++              NAMESPACE ${project}${LLVM_VERSION_MAJOR}::
+               COMPONENT ${prefix}cmake-exports)
+     endif()
+   else()
+@@ -207,6 +208,7 @@ function(install_distribution_exports project)
+         string(TOLOWER "${distribution}" distribution_lower)
+         set(target ${prefix}${distribution_lower}-cmake-exports)
+         install(EXPORT ${project}${distribution}${suffix} DESTINATION "${destination}"
++                NAMESPACE ${project}${LLVM_VERSION_MAJOR}::
+                 COMPONENT ${target})
+         if(NOT LLVM_ENABLE_IDE)
+           add_custom_target(${target})

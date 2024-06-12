@@ -28,23 +28,38 @@ on:
         type: string
         required: false
         default: ''
+      CMAKE_ARGS:
+        description: 'extra cmake args'
+        type: string
+        required: false
+        default: ''
       # why are these strings and not type boolean?
       # https://stackoverflow.com/a/76294014/9045206
       APPLY_PATCHES:
         description: 'whether to apply patches to source'
-        type: string
         required: false
-        default: 'true'
+        default: true
+        type: boolean
+      USE_CMAKE_NAMESPACES:
+        description: 'whether to build with cmake namespaced targets'
+        required: false
+        default: false
+        type: boolean
+      BUILD_NATIVE_TOOLS:
+        description: 'whether to build native tools'
+        required: false
+        default: true
+        type: boolean
       RUN_TESTS:
         description: 'whether to run llvm tests after build'
-        type: string
         required: false
-        default: 'false'
-      DEBUG_CI_FAST_BUILD:
-        description: 'whether to build only one single llvm target (llvm-tblgen)'
-        type: string
-        required: false
-        default: 'false'
+        default: false
+        type: boolean
+#      DEBUG_CI_FAST_BUILD:
+#        description: 'whether to build only one single llvm target (llvm-tblgen)'
+#        required: false
+#        default: false
+#        type: boolean
 
   pull_request:
   release:
@@ -78,7 +93,7 @@ jobs:
             sudo apt install jq
             LLVM_PROJECT_COMMIT=$(curl -s https://api.github.com/repos/llvm/llvm-project/commits/main | jq -r '.sha[:8]')
           else
-            LLVM_PROJECT_COMMIT="${{ inputs.llvm_commit }}"
+            LLVM_PROJECT_COMMIT="${{ inputs.LLVM_COMMIT }}"
           fi
           echo "LLVM_PROJECT_COMMIT=${LLVM_PROJECT_COMMIT}" | tee -a $GITHUB_OUTPUT
           DATETIME=$(date +"%Y%m%d%H")
@@ -96,36 +111,26 @@ jobs:
         id: settings
         run: |
           
-          APPLY_PATCHES="true"
-          if [ x"${{ inputs.APPLY_PATCHES }}" == x"false" ]; then
-            APPLY_PATCHES="false"
-          fi 
-          DEBUG_CI_FAST_BUILD="false"
-          if [ x"${{ inputs.DEBUG_CI_FAST_BUILD }}" == x"true" ]; then
-            DEBUG_CI_FAST_BUILD="true"
-          fi
-          RUN_TESTS="false"
-          if [ x"${{ inputs.RUN_TESTS }}" == x"true" ]; then
-            RUN_TESTS="true"
-          fi
-          
           UPLOAD_ARTIFACTS="true"
           if [ x"${{ github.event.schedule }}" == x"0 */4 * * *" ] || [ x"$DEBUG_CI_FAST_BUILD" == x"true" ]; then
             UPLOAD_ARTIFACTS="false"
           fi 
           
-          echo "APPLY_PATCHES=$APPLY_PATCHES" | tee -a $GITHUB_OUTPUT
-          echo "DEBUG_CI_FAST_BUILD=$DEBUG_CI_FAST_BUILD" | tee -a $GITHUB_OUTPUT
-          echo "RUN_TESTS=$RUN_TESTS" | tee -a $GITHUB_OUTPUT
           echo "UPLOAD_ARTIFACTS=$UPLOAD_ARTIFACTS" | tee -a $GITHUB_OUTPUT
-          
+
     outputs:
-      APPLY_PATCHES: ${{ steps.settings.outputs.APPLY_PATCHES }}
-      DEBUG_CI_FAST_BUILD: ${{ steps.settings.outputs.DEBUG_CI_FAST_BUILD }}
-      RUN_TESTS: ${{ steps.settings.outputs.RUN_TESTS }}
-      UPLOAD_ARTIFACTS: ${{ steps.settings.outputs.UPLOAD_ARTIFACTS }}
-      LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+      APPLY_PATCHES: ${{ inputs.APPLY_PATCHES }}
+      BUILD_NATIVE_TOOLS: ${{ inputs.BUILD_NATIVE_TOOLS }}
+      CMAKE_ARGS: ${{ inputs.CMAKE_ARGS }}
       DATETIME: ${{ needs.get_llvm_project_commit.outputs.DATETIME }}
+      DEBUG_ARCH: ${{ inputs.DEBUG_ARCH }}
+      DEBUG_DETACHED: ${{ inputs.DEBUG_DETACHED }}
+      DEBUG_ENABLED: ${{ inputs.DEBUG_ENABLED }}
+      DEBUG_OS: ${{ inputs.DEBUG_OS }}
+      LLVM_PROJECT_COMMIT: ${{ needs.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
+      RUN_TESTS: ${{ inputs.RUN_TESTS }}
+      UPLOAD_ARTIFACTS: ${{ steps.settings.outputs.UPLOAD_ARTIFACTS }}
+      USE_CMAKE_NAMESPACES: ${{ inputs.USE_CMAKE_NAMESPACES }}
 
   build:
 
@@ -186,6 +191,10 @@ jobs:
       run:
         shell: bash
 
+    permissions:
+      id-token: write
+      contents: write
+
     steps:
 
     - name: Checkout actions
@@ -195,10 +204,10 @@ jobs:
       id: setup_base
       with:
         # optional
-        DEBUG_ENABLED: ${{ inputs.DEBUG_ENABLED }}
-        DEBUG_OS: ${{ inputs.DEBUG_OS }}
-        DEBUG_ARCH: ${{ inputs.DEBUG_ARCH }}
-        DEBUG_DETACHED: ${{ inputs.DEBUG_DETACHED }}
+        DEBUG_ENABLED: ${{ needs.settings.outputs.DEBUG_ENABLED }}
+        DEBUG_OS: ${{ needs.settings.outputs.DEBUG_OS }}
+        DEBUG_ARCH: ${{ needs.settings.outputs.DEBUG_ARCH }}
+        DEBUG_DETACHED: ${{ needs.settings.outputs.DEBUG_DETACHED }}
         # required
         MATRIX_OS: ${{ matrix.OS }}
         MATRIX_ARCH: ${{ matrix.ARCH }}
@@ -245,10 +254,11 @@ jobs:
       run: |
         
         echo "APPLY_PATCHES=${{ needs.settings.outputs.APPLY_PATCHES }}" >> $GITHUB_ENV
-        echo "DEBUG_CI_FAST_BUILD=${{ needs.settings.outputs.DEBUG_CI_FAST_BUILD }}" >> $GITHUB_ENV
+        echo "CMAKE_ARGS=${{ needs.settings.outputs.CMAKE_ARGS }}" >> $GITHUB_ENV
         echo "RUN_TESTS=${{ needs.settings.outputs.RUN_TESTS }}" >> $GITHUB_ENV
         echo "DATETIME=${{ needs.settings.outputs.DATETIME }}" >> $GITHUB_ENV
         echo "LLVM_PROJECT_COMMIT=${{ needs.settings.outputs.LLVM_PROJECT_COMMIT }}" >> $GITHUB_ENV
+        echo "USE_CMAKE_NAMESPACES=${{ needs.settings.outputs.USE_CMAKE_NAMESPACES }}" >> $GITHUB_ENV
         
         echo "BUILD_CUDA=${{ matrix.BUILD_CUDA }}" >> $GITHUB_ENV
         echo "BUILD_OPENMP=${{ matrix.BUILD_OPENMP }}" >> $GITHUB_ENV
@@ -359,12 +369,6 @@ jobs:
         rm -rf llvm-project
         rm -rf build
 
-    - name: Docker prune
-      if: contains(inputs.MATRIX_OS, 'ubuntu')
-      run: |
-        
-        docker system prune -a -f
-
     - name: Get wheel version
       if: ${{ !contains(matrix.ARCH, 'wasm') }}
       id: get_wheel_version
@@ -417,7 +421,7 @@ jobs:
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       id: build_native_tools_wheel
-      if: ${{ !contains(matrix.ARCH, 'wasm') && needs.settings.outputs.DEBUG_CI_FAST_BUILD != 'true' }}
+      if: ${{ !contains(matrix.ARCH, 'wasm') && needs.settings.outputs.BUILD_NATIVE_TOOLS == 'true' }}
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
@@ -443,67 +447,38 @@ jobs:
         
         popd
 
-    # done
-
-    - name: Upload wheels
+    - name: Release current commit
       if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
-      uses: actions/upload-artifact@v3
+      uses: ncipollo/release-action@v1.12.0
       with:
-        path: |
-          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
-          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.zip
-        name: build_artifact
+        artifacts: "wheelhouse/*.whl,wheelhouse/*.zip"
+        token: "${{ secrets.GITHUB_TOKEN }}"
+        tag: "latest"
+        name: "latest"
+        removeArtifacts: false
+        allowUpdates: true
+        replacesArtifacts: true
+        makeLatest: true
 
-  upload_distro_wheels:
-
-    needs: [settings, build]
-      
-    if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
-
-    runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write
-      contents: write
-
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          # unpacks default artifact into dist/
-          # if `name: artifact` is omitted, the action will create extra parent dir
-          name: build_artifact
-          path: dist
-
-      - name: Release current commit
-        uses: ncipollo/release-action@v1.12.0
-        with:
-          artifacts: "dist/*.whl,dist/*.zip"
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          tag: "latest"
-          name: "latest"
-          removeArtifacts: false
-          allowUpdates: true
-          replacesArtifacts: true
-          makeLatest: true
-
-      - name: Release current commit
-        uses: ncipollo/release-action@v1.12.0
-        with:
-          owner: makslevental
-          repo: wheels
-          artifacts: "dist/*.whl,dist/*.zip"
-          token: "${{ secrets.WHEELS_REPO }}"
-          tag: "i"
-          name: "i"
-          removeArtifacts: false
-          allowUpdates: true
-          replacesArtifacts: true
-          makeLatest: true
+    - name: Release current commit
+      if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
+      uses: ncipollo/release-action@v1.12.0
+      with:
+        owner: makslevental
+        repo: wheels
+        artifacts: "wheelhouse/*.whl,wheelhouse/*.zip"
+        token: "${{ secrets.WHEELS_REPO }}"
+        tag: "i"
+        name: "i"
+        removeArtifacts: false
+        allowUpdates: true
+        replacesArtifacts: true
+        makeLatest: true
 
   call-build-python-bindings:
 
-    needs: [build, settings, upload_distro_wheels]
-    
+    needs: [build, settings]
+
     if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
 
     permissions:

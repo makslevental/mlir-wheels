@@ -10,7 +10,7 @@ from github import Auth
 # using an access token
 auth = Auth.Token(os.environ["GITHUB_TOKEN"])
 
-twomonthsago = datetime.date.today() - datetime.timedelta(days=30)
+onemonthago = datetime.date.today() - datetime.timedelta(days=30)
 
 # First create a Github instance:
 
@@ -24,7 +24,9 @@ for _ in range(100):
     release = repo.get_release(113028511)
     assets = release.get_assets()
     for ass in assets:
-        if ass.created_at.date() < twomonthsago:
+        if "llvmorg-15.0.7" in ass.name:
+            continue
+        if ass.created_at.date() < onemonthago:
             print(ass.name)
             assert ass.delete_asset()
             n_deleted += 1
@@ -33,7 +35,9 @@ for _ in range(100):
     release = repo.get_release(111725799)
     assets = release.get_assets()
     for ass in assets:
-        if ass.created_at.date() < twomonthsago:
+        if "llvmorg-15.0.7" in ass.name:
+            continue
+        if ass.created_at.date() < onemonthago:
             print(ass.name)
             assert ass.delete_asset()
             n_deleted += 1
