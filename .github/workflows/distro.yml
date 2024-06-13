@@ -119,8 +119,8 @@ jobs:
           echo "UPLOAD_ARTIFACTS=$UPLOAD_ARTIFACTS" | tee -a $GITHUB_OUTPUT
 
     outputs:
-      APPLY_PATCHES: ${{ inputs.APPLY_PATCHES }}
-      BUILD_NATIVE_TOOLS: ${{ inputs.BUILD_NATIVE_TOOLS }}
+      APPLY_PATCHES: ${{ inputs.APPLY_PATCHES || true }}
+      BUILD_NATIVE_TOOLS: ${{ inputs.BUILD_NATIVE_TOOLS || true }}
       CMAKE_ARGS: ${{ inputs.CMAKE_ARGS }}
       DATETIME: ${{ needs.get_llvm_project_commit.outputs.DATETIME }}
       DEBUG_ARCH: ${{ inputs.DEBUG_ARCH }}
@@ -453,7 +453,9 @@ jobs:
       if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
       uses: ncipollo/release-action@v1.12.0
       with:
-        artifacts: "wheelhouse/*.whl,wheelhouse/*.zip"
+        artifacts: |
+          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.zip
         token: "${{ secrets.GITHUB_TOKEN }}"
         tag: "latest"
         name: "latest"
@@ -468,7 +470,9 @@ jobs:
       with:
         owner: makslevental
         repo: wheels
-        artifacts: "wheelhouse/*.whl,wheelhouse/*.zip"
+        artifacts: |
+          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.zip
         token: "${{ secrets.WHEELS_REPO }}"
         tag: "i"
         name: "i"
