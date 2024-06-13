@@ -12,6 +12,9 @@ async_llvm_dylib \
 if [ x"$CIBW_ARCHS" == x"wasm32" ]; then
   PATCHES="$PATCHES wasm_mlir_opt"
 fi
+if [ x"$USE_CMAKE_NAMESPACES" == x"true" ]; then
+  PATCHES="$PATCHES namespaces"
+fi
 
 if [[ x"${APPLY_PATCHES:-true}" == x"true" ]]; then
   for PATCH in $PATCHES; do

@@ -45,6 +45,7 @@ environment-pass = [
     "PIP_FIND_LINKS",
     "PIP_NO_BUILD_ISOLATION",
     "RUN_TESTS",
+    "USE_CMAKE_NAMESPACES",
 ]
 repair-wheel-command = [
     "auditwheel repair -w {dest_dir} {wheel} --exclude libcuda.so.1 --exclude libvulkan.so.1 --exclude libomp.so --exclude libompd.so"

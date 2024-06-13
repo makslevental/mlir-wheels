@@ -64,7 +64,7 @@ class CMakeBuild(build_ext):
         cmake_args += []
 
         if "CMAKE_ARGS" in os.environ:
-            cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
+            cmake_args += [os.environ["CMAKE_ARGS"]]
 
         build_args = []
         if self.compiler.compiler_type != "msvc":
@@ -169,7 +169,10 @@ def check_env(build):
     return os.environ.get(build, 0) in {"1", "true", "True", "ON", "YES"}
 
 
-cmake_txt = open("llvm-project/cmake/Modules/LLVMVersion.cmake").read()
+cmake_version_path = Path("llvm-project/cmake/Modules/LLVMVersion.cmake")
+if not cmake_version_path.exists():
+    cmake_version_path = Path("llvm-project/llvm/CMakeLists.txt")
+cmake_txt = open(cmake_version_path).read()
 llvm_version = []
 for v in ["LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH"]:
     vn = re.findall(rf"set\({v} (\d+)\)", cmake_txt)
