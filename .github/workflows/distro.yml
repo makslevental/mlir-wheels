@@ -390,6 +390,8 @@ jobs:
         ccache -s
 
     - name: Reset datetime ccache
+      # find: The environment is too large for exec().
+      if: ${{ !contains(matrix.OS, 'windows') }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
