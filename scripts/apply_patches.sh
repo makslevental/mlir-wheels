@@ -8,12 +8,15 @@ mscv \
 remove_openmp_dep_on_clang_and_export_async_symbols \
 async_llvm_dylib \
 "
-
 if [ x"$CIBW_ARCHS" == x"wasm32" ]; then
   PATCHES="$PATCHES wasm_mlir_opt"
 fi
 if [ x"$USE_CMAKE_NAMESPACES" == x"true" ]; then
   PATCHES="$PATCHES namespaces"
+fi
+
+if [ x"$MATRIX_OS" == x"macos-12" ]; then
+  PATCHES="$PATCHES mac_vec"
 fi
 
 if [[ x"${APPLY_PATCHES:-true}" == x"true" ]]; then
