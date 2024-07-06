@@ -1,0 +1,11 @@
+diff --git a/mlir/include/mlir/IR/DialectInterface.h b/mlir/include/mlir/IR/DialectInterface.h
+--- a/mlir/include/mlir/IR/DialectInterface.h	(revision 8f5b1440dbdda570d66f170f47cb971388126bf3)
++++ b/mlir/include/mlir/IR/DialectInterface.h	(date 1698376316038)
+@@ -12,6 +12,7 @@
+ #include "mlir/Support/TypeID.h"
+ #include "llvm/ADT/DenseSet.h"
+ #include "llvm/ADT/STLExtras.h"
++#include <vector>
+
+ namespace mlir {
+ class Dialect;
