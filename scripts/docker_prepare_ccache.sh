@@ -6,7 +6,7 @@ if [[ -f "/etc/centos-release" ]]; then
   yum install -y epel-release
   # sometimes the epel server is down. retry 5 times
   for i in $(seq 1 5); do
-    yum install -y zlib-devel curl-devel expat-devel libpng-devel ccache wget ninja-build git && s=0 && break || s=$? && sleep 15
+    yum install -y curl-devel expat-devel libpng-devel ccache wget ninja-build git && s=0 && break || s=$? && sleep 15
   done
 
   [ $s -eq 0 ] || exit $s
@@ -28,7 +28,7 @@ if [[ -f "/etc/centos-release" ]]; then
 elif [[ -f "/etc/alpine-release" ]]; then
   # musllinux prep
   # ccache already present
-  apk add curl-dev expat-dev zlib-dev libpng-dev ccache
+  apk add curl-dev expat-dev libpng-dev ccache
   export PATH="/usr/lib/ccache/bin:$PATH"
 fi
 
@@ -43,7 +43,7 @@ if [ -d "$HOST_CCACHE_DIR" ]; then
 fi
 
 ccache -o cache_dir="/output/.ccache"
-ccache -M 5 G # set cache size to 5 G
+ccache -M 5 1
 # Show ccache stats
 echo "Cache stats:"
 ccache --show-stats
