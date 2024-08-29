@@ -34,14 +34,6 @@ description: ''
 runs:
   using: "composite"
 steps:
-    - name: Set unified TZ
-      uses: szenius/set-timezone@v2.0
-      with:
-        # this is an arbitrary choice
-        timezoneLinux: "Asia/Singapore"
-        timezoneMacos: "Asia/Singapore"
-        timezoneWindows: "Singapore Standard Time"
-        
     - name: Setup tmate session
       if: ${{ inputs.DEBUG_ENABLED && inputs.DEBUG_OS == inputs.MATRIX_OS && inputs.DEBUG_ARCH == inputs.MATRIX_ARCH }}
       uses: mxschmitt/action-tmate@v3
@@ -142,3 +134,12 @@ steps:
       shell: bash
       run: |
         docker system prune -a -f
+        
+    - name: Set unified TZ
+      uses: szenius/set-timezone@v2.0
+      with:
+        # this is an arbitrary choice
+        timezoneLinux: "Asia/Singapore"
+        timezoneMacos: "Asia/Singapore"
+        timezoneWindows: "Singapore Standard Time"
+        
