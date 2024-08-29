@@ -33,7 +33,7 @@ description: ''
 
 runs:
   using: "composite"
-steps:
+  steps:
     - name: Setup tmate session
       if: ${{ inputs.DEBUG_ENABLED && inputs.DEBUG_OS == inputs.MATRIX_OS && inputs.DEBUG_ARCH == inputs.MATRIX_ARCH }}
       uses: mxschmitt/action-tmate@v3
