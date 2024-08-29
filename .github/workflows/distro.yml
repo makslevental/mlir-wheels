@@ -196,6 +196,14 @@ jobs:
       contents: write
 
     steps:
+        
+    - name: Set unified TZ
+      uses: szenius/set-timezone@v2.0
+      with:
+        # this is an arbitrary choice
+        timezoneLinux: "Asia/Singapore"
+        timezoneMacos: "Asia/Singapore"
+        timezoneWindows: "Singapore Standard Time"
 
     - name: Checkout actions
       uses: actions/checkout@v3
