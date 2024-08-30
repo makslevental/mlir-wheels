@@ -136,7 +136,7 @@ jobs:
 
     needs: settings
 
-    name: ${{ matrix.OS }} ${{ matrix.ARCH }} ${{ matrix.BUILD_CUDA && 'cuda' || '' }} ${{ matrix.BUILD_VULKAN && 'vulkan' || '' }} ${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
+    name: ${{ matrix.OS }} ${{ matrix.ARCH }} ${{ matrix.BUILD_CUDA && 'cuda' || '' }} ${{ matrix.BUILD_ROCM && 'rocm' || '' }} ${{ matrix.BUILD_VULKAN && 'vulkan' || '' }} ${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
     continue-on-error: true
 
@@ -161,6 +161,10 @@ jobs:
           - OS: ubuntu-20.04
             ARCH: x86_64
             BUILD_CUDA: true
+
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_ROCM: true
 
 #          - OS: ubuntu-20.04
 #            ARCH: x86_64
@@ -217,7 +221,7 @@ jobs:
       with:
         MATRIX_OS: ${{ matrix.OS }}
         MATRIX_ARCH: ${{ matrix.ARCH }}
-        EXTRA_KEY: ${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
+        EXTRA_KEY: ${{ matrix.BUILD_ROCM && 'rocm-' || '' }}${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
         WORKSPACE_ROOT: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         
       # This step is needed because action/checkout does not support paths.
@@ -261,6 +265,7 @@ jobs:
         echo "USE_CMAKE_NAMESPACES=${{ needs.settings.outputs.USE_CMAKE_NAMESPACES }}" >> $GITHUB_ENV
         
         echo "BUILD_CUDA=${{ matrix.BUILD_CUDA }}" >> $GITHUB_ENV
+        echo "BUILD_ROCM=${{ matrix.BUILD_ROCM }}" >> $GITHUB_ENV
         echo "BUILD_OPENMP=${{ matrix.BUILD_OPENMP }}" >> $GITHUB_ENV
         echo "BUILD_VULKAN=${{ matrix.BUILD_VULKAN }}" >> $GITHUB_ENV
         echo "CIBW_ARCHS=${{ matrix.ARCH }}" >> $GITHUB_ENV
@@ -449,13 +454,20 @@ jobs:
         
         popd
 
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' && !contains(matrix.ARCH, 'wasm') }}
+      with:
+        name: ${{ matrix.OS }}-${{ matrix.ARCH }}-${{ matrix.BUILD_ROCM && 'rocm-' || '' }}${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
+        path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+        if-no-files-found: warn
+
     - name: Release current commit
       if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
       uses: ncipollo/release-action@v1.12.0
       with:
         artifacts: |
           ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
-          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.zip
         token: "${{ secrets.GITHUB_TOKEN }}"
         tag: "latest"
         name: "latest"
@@ -463,6 +475,7 @@ jobs:
         allowUpdates: true
         replacesArtifacts: true
         makeLatest: true
+        artifactErrorsFailBuild: true
 
     - name: Release current commit
       if: ${{ needs.settings.outputs.UPLOAD_ARTIFACTS == 'true' }}
@@ -472,7 +485,6 @@ jobs:
         repo: wheels
         artifacts: |
           ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
-          ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.zip
         token: "${{ secrets.WHEELS_REPO }}"
         tag: "i"
         name: "i"
@@ -480,6 +492,7 @@ jobs:
         allowUpdates: true
         replacesArtifacts: true
         makeLatest: true
+        artifactErrorsFailBuild: true
 
   call-build-python-bindings:
 
@@ -492,7 +505,7 @@ jobs:
       id-token: write
 
     # DON'T FORGET TO CHANGE THIS IF YOU UPDATE WHEELS.YML
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@build-rocm
     secrets: inherit # pass all secrets
     with:
       MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}

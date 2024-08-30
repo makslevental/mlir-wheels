@@ -30,6 +30,7 @@ before-test = "ccache --show-stats"
 environment-pass = [
     "APPLY_PATCHES",
     "BUILD_CUDA",
+    "BUILD_ROCM",
     "BUILD_OPENMP",
     "BUILD_VULKAN",
     "CIBW_ARCHS",

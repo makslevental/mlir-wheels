@@ -93,6 +93,14 @@ if(BUILD_CUDA)
   list(APPEND _llvm_targets_to_build NVPTX)
 endif()
 
+option(BUILD_ROCM "" OFF)
+if(BUILD_ROCM)
+#  set(MLIR_ENABLE_ROCM_RUNNER ON CACHE BOOL "")
+#  set(MLIR_ENABLE_ROCM_CONVERSIONS ON CACHE BOOL "")
+#  set(ROCM_PATH /usr/local/cuda/bin/nvcc CACHE STRING "")
+  list(APPEND _llvm_targets_to_build AMDGPU)
+endif()
+
 # for some reason if you set a CACHE var twice it actually creates two of them
 # and they're not _both_ respected (llvm wasn't building NVPTX...)
 set(LLVM_TARGETS_TO_BUILD ${_llvm_targets_to_build} CACHE STRING "")
