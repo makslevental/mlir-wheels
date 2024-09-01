@@ -109,11 +109,6 @@ class CMakeBuild(build_ext):
                 "-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc",
                 "-DCUDAToolkit_ROOT=/usr/local/cuda",
             ]
-        if BUILD_ROCM:
-            cmake_args += [
-                # "-DMLIR_ENABLE_ROCM_RUNNER=ON",
-                # "-DMLIR_ENABLE_ROCM_CONVERSIONS=ON",
-            ]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
@@ -189,7 +184,6 @@ if len(sys.argv) > 1 and sys.argv[1] == "--plat":
     exit()
 
 BUILD_CUDA = check_env("BUILD_CUDA")
-BUILD_ROCM = check_env("BUILD_ROCM")
 
 version = version("mlir")
 

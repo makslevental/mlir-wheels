@@ -94,11 +94,8 @@ if(BUILD_CUDA)
   list(APPEND _llvm_targets_to_build NVPTX)
 endif()
 
-option(BUILD_ROCM "" OFF)
-if(BUILD_ROCM)
-#  set(MLIR_ENABLE_ROCM_RUNNER ON CACHE BOOL "")
-#  set(MLIR_ENABLE_ROCM_CONVERSIONS ON CACHE BOOL "")
-#  set(ROCM_PATH /usr/local/cuda/bin/nvcc CACHE STRING "")
+option(BUILD_AMDGPU "" OFF)
+if(BUILD_AMDGPU)
   list(APPEND _llvm_targets_to_build AMDGPU)
 endif()
 

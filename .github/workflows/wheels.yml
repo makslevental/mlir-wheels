@@ -36,7 +36,7 @@ jobs:
 
           - OS: ubuntu-20.04
             ARCH: x86_64
-            BUILD_ROCM: true
+            BUILD_AMDGPU: true
 
 #          - OS: ubuntu-20.04
 #            ARCH: x86_64
@@ -82,7 +82,7 @@ jobs:
         with:
           MATRIX_OS: ${{ matrix.OS }}
           MATRIX_ARCH: ${{ matrix.ARCH }}
-          EXTRA_KEY: ${{ matrix.BUILD_ROCM && 'rocm-' || '' }}${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
+          EXTRA_KEY: ${{ matrix.BUILD_AMDGPU && 'amdgpu-' || '' }}${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
           WORKSPACE_ROOT: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
 
         # This step is needed because action/checkout does not support paths.
@@ -120,7 +120,7 @@ jobs:
           pushd python_bindings
           
           BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
-          BUILD_ROCM=${{ matrix.BUILD_ROCM }} \
+          BUILD_AMDGPU=${{ matrix.BUILD_AMDGPU }} \
           BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
           BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
           CIBW_ARCHS=${{ matrix.ARCH }} \
@@ -231,7 +231,7 @@ jobs:
           pushd python_bindings
           
           BUILD_CUDA=${{ matrix.BUILD_CUDA }} \
-          BUILD_ROCM=${{ matrix.BUILD_ROCM }} \
+          BUILD_AMDGPU=${{ matrix.BUILD_AMDGPU }} \
           BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
           BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
           CIBW_ARCHS=${{ matrix.ARCH }} \

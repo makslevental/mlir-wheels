@@ -55,7 +55,7 @@ class CMakeBuild(build_ext):
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
             # custom
             f"-DBUILD_CUDA={BUILD_CUDA}",
-            f"-DBUILD_ROCM={BUILD_ROCM}",
+            f"-DBUILD_AMDGPU={BUILD_AMDGPU}",
             f"-DBUILD_OPENMP={BUILD_OPENMP}",
             f"-DBUILD_VULKAN={BUILD_VULKAN}",
             f"-DCIBW_ARCHS={os.getenv('CIBW_ARCHS')}",
@@ -193,9 +193,9 @@ local_version = []
 BUILD_CUDA = check_env("BUILD_CUDA")
 if BUILD_CUDA:
     local_version += ["cuda"]
-BUILD_ROCM = check_env("BUILD_ROCM")
-if BUILD_ROCM:
-    local_version += ["rocm"]
+BUILD_AMDGPU = check_env("BUILD_AMDGPU")
+if BUILD_AMDGPU:
+    local_version += ["amdgpu"]
 BUILD_VULKAN = check_env("BUILD_VULKAN")
 if BUILD_VULKAN:
     local_version += ["vulkan"]
