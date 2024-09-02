@@ -55,6 +55,7 @@ class CMakeBuild(build_ext):
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
             # custom
             f"-DBUILD_CUDA={BUILD_CUDA}",
+            f"-DBUILD_AMDGPU={BUILD_AMDGPU}",
             f"-DBUILD_OPENMP={BUILD_OPENMP}",
             f"-DBUILD_VULKAN={BUILD_VULKAN}",
             f"-DCIBW_ARCHS={os.getenv('CIBW_ARCHS')}",
@@ -192,6 +193,9 @@ local_version = []
 BUILD_CUDA = check_env("BUILD_CUDA")
 if BUILD_CUDA:
     local_version += ["cuda"]
+BUILD_AMDGPU = check_env("BUILD_AMDGPU")
+if BUILD_AMDGPU:
+    local_version += ["amdgpu"]
 BUILD_VULKAN = check_env("BUILD_VULKAN")
 if BUILD_VULKAN:
     local_version += ["vulkan"]
@@ -213,18 +217,6 @@ build_temp = Path.cwd() / "build" / "temp"
 if not build_temp.exists():
     build_temp.mkdir(parents=True)
 
-EXE_EXT = ".exe" if platform.system() == "Windows" else ""
-if not check_env("DEBUG_CI_FAST_BUILD") and not BUILD_CUDA:
-    exes = [
-        "mlir-cpu-runner",
-        "mlir-opt",
-        "mlir-translate",
-    ]
-else:
-    exes = ["llvm-tblgen"]
-
-data_files = [("bin", [str(build_temp / "bin" / x) + EXE_EXT for x in exes])]
-
 setup(
     name="mlir",
     version=version,
@@ -236,6 +228,5 @@ setup(
     ext_modules=[CMakeExtension("mlir", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    download_url=llvm_url,
-    # data_files=data_files,
+    download_url=llvm_url
 )

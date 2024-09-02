@@ -136,7 +136,7 @@ jobs:
 
     needs: settings
 
-    name: ${{ matrix.OS }} ${{ matrix.ARCH }} ${{ matrix.BUILD_CUDA && 'cuda' || '' }} ${{ matrix.BUILD_VULKAN && 'vulkan' || '' }} ${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
+    name: ${{ matrix.OS }} ${{ matrix.ARCH }} ${{ matrix.BUILD_CUDA && 'cuda' || '' }} ${{ matrix.BUILD_AMDGPU && 'amdgpu' || '' }} ${{ matrix.BUILD_VULKAN && 'vulkan' || '' }} ${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
     continue-on-error: true
 
@@ -161,6 +161,10 @@ jobs:
           - OS: ubuntu-20.04
             ARCH: x86_64
             BUILD_CUDA: true
+
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+            BUILD_AMDGPU: true
 
 #          - OS: ubuntu-20.04
 #            ARCH: x86_64
@@ -217,7 +221,7 @@ jobs:
       with:
         MATRIX_OS: ${{ matrix.OS }}
         MATRIX_ARCH: ${{ matrix.ARCH }}
-        EXTRA_KEY: ${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
+        EXTRA_KEY: ${{ matrix.BUILD_AMDGPU && 'amdgpu-' || '' }}${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
         WORKSPACE_ROOT: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         
       # This step is needed because action/checkout does not support paths.
@@ -261,6 +265,7 @@ jobs:
         echo "USE_CMAKE_NAMESPACES=${{ needs.settings.outputs.USE_CMAKE_NAMESPACES }}" >> $GITHUB_ENV
         
         echo "BUILD_CUDA=${{ matrix.BUILD_CUDA }}" >> $GITHUB_ENV
+        echo "BUILD_AMDGPU=${{ matrix.BUILD_AMDGPU }}" >> $GITHUB_ENV
         echo "BUILD_OPENMP=${{ matrix.BUILD_OPENMP }}" >> $GITHUB_ENV
         echo "BUILD_VULKAN=${{ matrix.BUILD_VULKAN }}" >> $GITHUB_ENV
         echo "CIBW_ARCHS=${{ matrix.ARCH }}" >> $GITHUB_ENV

@@ -1,8 +1,9 @@
 include(CMakePrintHelpers)
 
-set(LLVM_ENABLE_PROJECTS "llvm;mlir;clang;clang-tools-extra;lld" CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS "llvm;mlir;clang;lld" CACHE STRING "")
 
 option(RUN_TESTS "" OFF)
+set(LLVM_INCLUDE_TESTS ${RUN_TESTS} CACHE BOOL "")
 set(LLVM_BUILD_TESTS ${RUN_TESTS} CACHE BOOL "")
 set(LLVM_INCLUDE_TESTS ${RUN_TESTS} CACHE BOOL "")
 set(MLIR_INCLUDE_INTEGRATION_TESTS ${RUN_TESTS} CACHE BOOL "")
@@ -91,6 +92,11 @@ if(BUILD_CUDA)
       /usr/local/cuda/lib64/lib /usr/local/cuda/lib64/lib64/stubs /usr/local/cuda/lib64/lib/stubs /usr/local/cuda/lib64)
   set(CMAKE_LIBRARY_PATH ${_cuda_lib_paths} CACHE STRING "")
   list(APPEND _llvm_targets_to_build NVPTX)
+endif()
+
+option(BUILD_AMDGPU "" OFF)
+if(BUILD_AMDGPU)
+  list(APPEND _llvm_targets_to_build AMDGPU)
 endif()
 
 # for some reason if you set a CACHE var twice it actually creates two of them
