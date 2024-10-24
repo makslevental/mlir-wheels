@@ -35,7 +35,7 @@ class CMakeBuild(build_ext):
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
         install_dir = extdir / "mlir"
-        cfg = "Release"
+        cfg = "RelWithDebInfo"
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
 
@@ -60,6 +60,7 @@ class CMakeBuild(build_ext):
             f"-DBUILD_VULKAN={BUILD_VULKAN}",
             f"-DCIBW_ARCHS={os.getenv('CIBW_ARCHS')}",
             f"-DRUN_TESTS={RUN_TESTS}",
+            "-DLLVM_USE_SPLIT_DWARF=ON",
         ]
 
         cmake_args += []
