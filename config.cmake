@@ -1,6 +1,6 @@
 include(CMakePrintHelpers)
 
-set(LLVM_ENABLE_PROJECTS "llvm;mlir;clang;lld" CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS "mlir" CACHE STRING "")
 
 option(RUN_TESTS "" OFF)
 set(LLVM_INCLUDE_TESTS ${RUN_TESTS} CACHE BOOL "")
