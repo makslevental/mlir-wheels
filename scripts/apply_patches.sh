@@ -15,7 +15,7 @@ if [ x"$USE_CMAKE_NAMESPACES" == x"true" ]; then
   PATCHES="$PATCHES namespaces"
 fi
 
-if [ x"$MATRIX_OS" == x"macos-12" ]; then
+if [ x"$MATRIX_OS" == x"macos-13" ]; then
   PATCHES="$PATCHES mac_vec"
 fi
 

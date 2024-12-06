@@ -177,17 +177,17 @@ jobs:
           - OS: windows-2019
             ARCH: AMD64
 
-          - OS: macos-12
+          - OS: macos-13
             ARCH: x86_64
 
-          - OS: macos-12
+          - OS: macos-13
             ARCH: arm64
 
-#          - OS: macos-12
+#          - OS: macos-13
 #            ARCH: arm64
 #            BUILD_VULKAN: true
 #
-#          - OS: macos-12
+#          - OS: macos-13
 #            ARCH: arm64
 #            BUILD_OPENMP: true
 
@@ -404,7 +404,7 @@ jobs:
         find $HOST_CCACHE_DIR -exec touch -a -m -t 197001010000 {} \;
 
     - name: rename non-windows
-      if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-12' }}
+      if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-13' }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
@@ -440,7 +440,7 @@ jobs:
         
         if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ]; then
           PLAT="linux"
-        elif [ x"${{ matrix.OS }}" == x"macos-12" ]; then
+        elif [ x"${{ matrix.OS }}" == x"macos-13" ]; then
           PLAT="macosx_12_0"
         elif [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
           PLAT="win"

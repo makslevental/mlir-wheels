@@ -29,7 +29,7 @@ if [ "$machine" == "linux" ]; then
   export ARCH=x86_64
   export PARALLEL_LEVEL=15
 elif [ "$machine" == "macos" ]; then
-  export MATRIX_OS=macos-12
+  export MATRIX_OS=macos-13
   export CIBW_ARCHS=arm64
   export CIBW_BUILD=cp311-macosx_arm64
   export ARCH=arm64
@@ -67,7 +67,7 @@ done
 
 if [ x"$MATRIX_OS" == x"ubuntu-20.04" ]; then
   PLAT="manylinux_2_17"
-elif [ x"$MATRIX_OS" == x"macos-12" ]; then
+elif [ x"$MATRIX_OS" == x"macos-13" ]; then
   PLAT="macosx_12_0"
 elif [ x"$MATRIX_OS" == x"windows-2019" ]; then
   PLAT="win"
