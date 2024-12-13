@@ -8,6 +8,7 @@ requires = [
     "numpy",
     "dataclasses",
     "PyYAML",
+    "nanobind",
 ]
 build-backend = "setuptools.build_meta"
 
