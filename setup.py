@@ -54,7 +54,6 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DCMAKE_SYSTEM_NAME={platform.system()}",
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
-            f"-DPython_INCLUDE_DIR={get_paths()['include']}",
             # custom
             f"-DBUILD_CUDA={BUILD_CUDA}",
             f"-DBUILD_AMDGPU={BUILD_AMDGPU}",
@@ -64,7 +63,9 @@ class CMakeBuild(build_ext):
             f"-DRUN_TESTS={RUN_TESTS}",
         ]
 
-        cmake_args += []
+        # workaround for Could NOT find Python (missing: Python_INCLUDE_DIRS Development on aarch64
+        if platform.system() == "Linux":
+            cmake_args += [f"-DPython_INCLUDE_DIR={get_paths()['include']}",]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [os.environ["CMAKE_ARGS"]]
