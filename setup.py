@@ -53,9 +53,6 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DCMAKE_SYSTEM_NAME={platform.system()}",
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
-            # mlir
-            # workaround issue on aarch64 where Could NOT find Python (missing: Python_INCLUDE_DIRS Development.Module)
-            "-DMLIR_DETECT_PYTHON_ENV_PRIME_SEARCH=ON",
             # custom
             f"-DBUILD_CUDA={BUILD_CUDA}",
             f"-DBUILD_AMDGPU={BUILD_AMDGPU}",
