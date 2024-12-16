@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import sys
+from sysconfig import get_paths
 from datetime import datetime
 from distutils.command.install_data import install_data
 from pathlib import Path
@@ -53,6 +54,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DCMAKE_SYSTEM_NAME={platform.system()}",
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
+            f"-DPython_INCLUDE_DIR={get_paths()['include']}",
             # custom
             f"-DBUILD_CUDA={BUILD_CUDA}",
             f"-DBUILD_AMDGPU={BUILD_AMDGPU}",
