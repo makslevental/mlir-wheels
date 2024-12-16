@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import sys
+from sysconfig import get_paths
 from datetime import datetime
 from distutils.command.install_data import install_data
 from pathlib import Path
@@ -62,7 +63,9 @@ class CMakeBuild(build_ext):
             f"-DRUN_TESTS={RUN_TESTS}",
         ]
 
-        cmake_args += []
+        # workaround for Could NOT find Python (missing: Python_INCLUDE_DIRS Development on aarch64
+        if platform.system() == "Linux":
+            cmake_args += [f"-DPython_INCLUDE_DIR={get_paths()['include']}",]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [os.environ["CMAKE_ARGS"]]
