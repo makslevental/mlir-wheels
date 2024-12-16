@@ -91,8 +91,7 @@ if(BUILD_CUDA)
       /usr/local/cuda/lib64/lib/x86_64-linux-gnu /usr/local/cuda/lib64/lib/x64 /usr/local/cuda/lib64/lib64
       /usr/local/cuda/lib64/lib /usr/local/cuda/lib64/lib64/stubs /usr/local/cuda/lib64/lib/stubs /usr/local/cuda/lib64)
   set(CMAKE_LIBRARY_PATH ${_cuda_lib_paths} CACHE STRING "")
-  list(APPEND CMAKE_C_FLAGS "-allow-unsupported-compiler")
-  list(APPEND CMAKE_CXX_FLAGS "-allow-unsupported-compiler")
+  list(APPEND CUDA_NVCC_FLAGS "-allow-unsupported-compiler")
   list(APPEND _llvm_targets_to_build NVPTX)
 endif()
 
