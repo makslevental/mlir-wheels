@@ -73,6 +73,11 @@ class CMakeBuild(build_ext):
             shutil.move(MLIR_INSTALL_ABS_PATH, "/tmp/m")
             MLIR_INSTALL_ABS_PATH = Path("/tmp/m").absolute()
 
+        # make windows happy
+        PYTHON_EXECUTABLE = str(Path(sys.executable))
+        if platform.system() == "Windows":
+            PYTHON_EXECUTABLE = PYTHON_EXECUTABLE.replace("\\", "\\\\")
+
         cmake_args = [
             f"-G {cmake_generator}",
             "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
@@ -80,7 +85,8 @@ class CMakeBuild(build_ext):
             "-DLLVM_ENABLE_WARNINGS=OFF",
             f"-DCMAKE_PREFIX_PATH={MLIR_INSTALL_ABS_PATH}",
             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
-            f"-DPython3_EXECUTABLE={sys.executable}",
+            f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
+            f"-DPython_EXECUTABLE={PYTHON_EXECUTABLE}",
             # Disables generation of "version soname" (i.e. libFoo.so.<version>), which
             # causes pure duplication of various shlibs for Python wheels.
             "-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON",

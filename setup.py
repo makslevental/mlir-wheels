@@ -54,6 +54,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DCMAKE_SYSTEM_NAME={platform.system()}",
             f"-DPython3_EXECUTABLE={PYTHON_EXECUTABLE}",
+            f"-DPython_EXECUTABLE={PYTHON_EXECUTABLE}",
             # custom
             f"-DBUILD_CUDA={BUILD_CUDA}",
             f"-DBUILD_AMDGPU={BUILD_AMDGPU}",

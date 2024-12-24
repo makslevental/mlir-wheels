@@ -273,9 +273,64 @@ jobs:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
           name: build_artifact_python_bindings
 
-  upload_bindings_wheels:
+  smoke-test:
 
     needs: [build, build-linux-aarch64]
+
+    runs-on: ${{ matrix.OS }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - OS: ubuntu-20.04
+            ARCH: x86_64
+
+          - OS: windows-2019
+            ARCH: AMD64
+
+          - OS: macos-13
+            ARCH: x86_64
+
+          - OS: macos-14
+            ARCH: arm64
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: llvm/llvm-project
+          sparse-checkout: mlir/test/python/dialects
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: build_artifact_python_bindings
+          path: wheelhouse
+
+
+      - name: Install, configure, and test
+        run: |
+          
+          pip install mlir-python-bindings numpy -v -f wheelhouse
+          cd mlir/test/python/dialects
+          for f in *.py; do
+            if [[ "$f" == "python_test.py" ]]; then
+              continue
+            fi
+            python $f
+          done
+
+  upload_bindings_wheels:
+
+    needs: [build, build-linux-aarch64, smoke-test]
 
     runs-on: ubuntu-latest
 
