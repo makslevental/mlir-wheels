@@ -181,6 +181,10 @@ jobs:
             ARCH: aarch64
             PY_VERSION: "cp312"
 
+          - OS: ubuntu-20.04
+            ARCH: aarch64
+            PY_VERSION: "cp313"
+
     steps:
       - name: Checkout actions
         uses: actions/checkout@v3
