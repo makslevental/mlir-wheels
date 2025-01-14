@@ -1,0 +1,28 @@
+name: NV jobs
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nvcc-ubuntu:
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:12.5.1-devel-ubuntu24.04
+    name: "Python 3 / NVCC (CUDA 12.5.1) / ubuntu-latest"
+
+    steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Run tests
+      run:
+        nvidia-smi
+        pip install cupy-cuda12x
