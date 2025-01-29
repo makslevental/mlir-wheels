@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -xe
 
-export PIP_FIND_LINKS="wheelhouse https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest https://makslevental.github.io/wheels"
+export PIP_FIND_LINKS="wheelhouse https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest"
 
 SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
 
