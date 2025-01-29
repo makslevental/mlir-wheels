@@ -161,29 +161,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - OS: ubuntu-20.04
+          - OS: ubuntu-22.04-arm
             ARCH: aarch64
-            PY_VERSION: "cp38"
-
-          - OS: ubuntu-20.04
-            ARCH: aarch64
-            PY_VERSION: "cp39"
-
-          - OS: ubuntu-20.04
-            ARCH: aarch64
-            PY_VERSION: "cp310"
-
-          - OS: ubuntu-20.04
-            ARCH: aarch64
-            PY_VERSION: "cp311"
-
-          - OS: ubuntu-20.04
-            ARCH: aarch64
-            PY_VERSION: "cp312"
-
-          - OS: ubuntu-20.04
-            ARCH: aarch64
-            PY_VERSION: "cp313"
 
     steps:
       - name: Checkout actions
@@ -208,9 +187,6 @@ jobs:
         run: |
           
           WORKSPACE_ROOT="${{ steps.setup_base.outputs.WORKSPACE_ROOT }}"
-          if [[ "${{ matrix.OS }}" == *"windows"* ]]; then
-            WORKSPACE_ROOT=$(echo "/$WORKSPACE_ROOT" | sed -e 's/\\/\//g' -e 's/://')
-          fi
           ls -lah
           
           if [[ x"$PWD" != x"$WORKSPACE_ROOT" ]]; then
@@ -218,12 +194,6 @@ jobs:
             cp -r ./* "$WORKSPACE_ROOT"
           fi
           ls -lah "$WORKSPACE_ROOT"
-
-      - name: Set up QEMU
-        if: ${{ matrix.OS == 'ubuntu-20.04' && matrix.ARCH == 'aarch64' }}
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: ${{ matrix.ARCH }}
 
       # build
 
@@ -239,8 +209,6 @@ jobs:
           BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
           BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
           CIBW_ARCHS=${{ matrix.ARCH }} \
-          CIBW_BUILD=${{ matrix.PY_VERSION }}-manylinux_aarch64 \
-          CIBW_CONTAINER_ENGINE="docker; create_args: --platform=linux/aarch64" \
           CMAKE_GENERATOR=Ninja \
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
           MATRIX_OS=${{ matrix.OS }} \
