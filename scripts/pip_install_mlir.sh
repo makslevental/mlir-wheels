@@ -16,6 +16,9 @@ if [ ! -z "$MLIR_WHEEL_VERSION" ]; then
   if [ x"$BUILD_CUDA" == x"true" ]; then
     LOCAL_VERSION="$LOCAL_VERSION cuda"
   fi
+  if [ x"$BUILD_AMDGPU" == x"true" ]; then
+    LOCAL_VERSION="$LOCAL_VERSION amdgpu"
+  fi
   LOCAL_VERSION="$LOCAL_VERSION $HASH"
   LOCAL_VERSION=$(echo $LOCAL_VERSION | tr ' ' '.')
   MLIR_WHEEL_VERSION="==$DATE+$LOCAL_VERSION"
