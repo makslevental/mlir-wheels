@@ -98,7 +98,7 @@ runs:
       shell: bash
       run: |
         
-        if [ x"${{ inputs.MATRIX_OS }}" == x"macos-13" ]; then
+        if [ x"${{ contains(inputs.MATRIX_OS, 'macos') }}" == x"true" ]; then
           brew install rename
         else
           sudo apt-get install -y rename
