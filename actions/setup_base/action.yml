@@ -94,7 +94,7 @@ runs:
       run: pip install cibuildwheel wheel
 
     - name: install rename
-      if: ${{ contains(inputs.MATRIX_OS, 'ubuntu') || inputs.MATRIX_OS == 'macos-13' }}
+      if: ${{ contains(inputs.MATRIX_OS, 'ubuntu') || contains(inputs.MATRIX_OS, 'macos') }}
       shell: bash
       run: |
         
