@@ -52,7 +52,7 @@ jobs:
           - OS: macos-13
             ARCH: x86_64
 
-          - OS: macos-13
+          - OS: macos-14
             ARCH: arm64
 
 #          - OS: macos-13
@@ -147,10 +147,10 @@ jobs:
       # done
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
-          name: build_artifact_python_bindings
+          name: build_artifact_python_bindings-${{ matrix.OS }}-${{ matrix.ARCH }}-${{ matrix.BUILD_AMDGPU && 'amdgpu-' || '' }}${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
   build-linux-aarch64:
 
@@ -240,10 +240,10 @@ jobs:
       # done
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
-          name: build_artifact_python_bindings
+          name: build_artifact_python_bindings-${{ matrix.OS }}-${{ matrix.ARCH }}-${{ matrix.BUILD_AMDGPU && 'amdgpu-' || '' }}${{ matrix.BUILD_CUDA && 'cuda-' || '' }}${{ matrix.BUILD_VULKAN && 'vulkan-' || '' }}${{ matrix.BUILD_OPENMP && 'openmp' || '' }}
 
   smoke-test:
 
@@ -273,7 +273,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: llvm/llvm-project
           sparse-checkout: mlir/test/python/dialects
@@ -282,11 +282,11 @@ jobs:
         with:
           python-version: '3.10'
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: build_artifact_python_bindings
+          name: build_artifact_python_bindings-${{ matrix.OS }}-${{ matrix.ARCH }}-
           path: wheelhouse
-
+          merge-multiple: true
 
       - name: Install, configure, and test
         run: |
@@ -311,12 +311,11 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          # unpacks default artifact into dist/
-          # if `name: artifact` is omitted, the action will create extra parent dir
-          name: build_artifact_python_bindings
+          pattern: build_artifact_python_bindings-*
           path: dist
+          merge-multiple: true
 
       - name: Release current commit
         uses: ncipollo/release-action@v1.12.0

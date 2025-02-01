@@ -16,6 +16,9 @@ if [ ! -z "$MLIR_WHEEL_VERSION" ]; then
   if [ x"$BUILD_CUDA" == x"true" ]; then
     LOCAL_VERSION="$LOCAL_VERSION cuda"
   fi
+  if [ x"$BUILD_AMDGPU" == x"true" ]; then
+    LOCAL_VERSION="$LOCAL_VERSION amdgpu"
+  fi
   LOCAL_VERSION="$LOCAL_VERSION $HASH"
   LOCAL_VERSION=$(echo $LOCAL_VERSION | tr ' ' '.')
   MLIR_WHEEL_VERSION="==$DATE+$LOCAL_VERSION"
@@ -24,9 +27,9 @@ else
 fi
 
 if [ x"$CIBW_ARCHS" == x"arm64" ] || [ x"$CIBW_ARCHS" == x"aarch64" ]; then
-  if [ x"$MATRIX_OS" == x"macos-13" ] && [ x"$CIBW_ARCHS" == x"arm64" ]; then
+  if [ x"$MATRIX_OS" == x"macos-13" ] || [ x"$MATRIX_OS" == x"macos-14" ]; then
     PLAT=macosx_12_0_arm64
-  elif [ x"$MATRIX_OS" == x"ubuntu-20.04" ] || [ x"$MATRIX_OS" == x"ubuntu-22.04-arm" ] && [ x"$CIBW_ARCHS" == x"aarch64" ]; then
+  elif [ x"$MATRIX_OS" == x"ubuntu-20.04" ] || [ x"$MATRIX_OS" == x"ubuntu-22.04-arm" ]; then
     PLAT=linux_aarch64
   fi
   pip install mlir$MLIR_WHEEL_VERSION --platform $PLAT --only-binary=:all: --target $SITE_PACKAGES --no-deps --force -U
