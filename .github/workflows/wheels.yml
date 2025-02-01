@@ -52,7 +52,7 @@ jobs:
           - OS: macos-13
             ARCH: x86_64
 
-          - OS: macos-13
+          - OS: macos-14
             ARCH: arm64
 
 #          - OS: macos-13
