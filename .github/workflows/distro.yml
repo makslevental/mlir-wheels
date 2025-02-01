@@ -404,7 +404,7 @@ jobs:
         find $HOST_CCACHE_DIR -exec touch -a -m -t 197001010000 {} \;
 
     - name: rename non-windows
-      if: ${{ matrix.OS == 'ubuntu-20.04' || matrix.OS == 'macos-13' }}
+      if: ${{ !contains(matrix.OS, 'windows') }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
