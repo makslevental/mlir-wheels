@@ -440,7 +440,7 @@ jobs:
         
         if [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ]; then
           PLAT="linux"
-        elif [ x"${{ matrix.OS }}" == x"macos-13" ]; then
+        elif [ x"${{ contains(matrix.ARCH, 'macos') }}" == "true" ]; then
           PLAT="macosx_12_0"
         elif [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
           PLAT="win"
