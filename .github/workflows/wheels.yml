@@ -27,22 +27,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - OS: ubuntu-20.04
+          - OS: ubuntu-22.04
             ARCH: x86_64
 
-#          - OS: ubuntu-20.04
+#          - OS: ubuntu-22.04
 #            ARCH: x86_64
 #            BUILD_CUDA: true
 
-          - OS: ubuntu-20.04
+          - OS: ubuntu-22.04
             ARCH: x86_64
             BUILD_AMDGPU: true
 
-#          - OS: ubuntu-20.04
+#          - OS: ubuntu-22.04
 #            ARCH: x86_64
 #            BUILD_VULKAN: true
 #
-#          - OS: ubuntu-20.04
+#          - OS: ubuntu-22.04
 #            ARCH: x86_64
 #            BUILD_OPENMP: true
 
@@ -133,7 +133,7 @@ jobs:
           popd
 
       - name: Download cache from container ubuntu
-        if: ${{ matrix.OS == 'ubuntu-20.04' && (success() || failure()) }}
+        if: ${{ matrix.OS == 'ubuntu-22.04' && (success() || failure()) }}
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
           
@@ -255,7 +255,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - OS: ubuntu-20.04
+          - OS: ubuntu-22.04
             ARCH: x86_64
 
           - OS: windows-2019
