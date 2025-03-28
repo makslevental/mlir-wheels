@@ -158,6 +158,7 @@ jobs:
           - OS: ubuntu-20.04
             ARCH: aarch64
 
+#           unsupported GNU version! gcc versions later than 13 are not supported! The nvcc flag '-allow-unsupported-compiler' can be used to override this version check; however, using an unsupported host compiler may cause compilation failure or incorrect run time execution. Use at your own risk.
 #          - OS: ubuntu-22.04
 #            ARCH: x86_64
 #            BUILD_CUDA: true
@@ -294,7 +295,7 @@ jobs:
         cibuildwheel --output-dir wheelhouse
 
     - name: build aarch ubuntu wheel
-      if: ${{ matrix.OS == 'ubuntu-22.04' && matrix.ARCH == 'aarch64' }}
+      if: (matrix.ARCH == 'aarch64')
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
@@ -384,7 +385,7 @@ jobs:
         echo "MLIR_WHEEL_VERSION=$(python -c "import pkginfo; w = pkginfo.Wheel('$WHL'); print(w.version.split('+')[0] + '+' + w.version.split('+')[1].rsplit('.', 1)[-1])")" | tee -a $GITHUB_OUTPUT
 
     - name: Download cache from container ubuntu
-      if: (matrix.OS == 'ubuntu-22.04' && matrix.ARCH == 'x86_64') && (success() || failure())
+      if: (contains(matrix.OS, 'ubuntu') && matrix.ARCH == 'x86_64') && (success() || failure())
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
@@ -411,7 +412,7 @@ jobs:
         rename 's/cp310-cp310/py3-none/' wheelhouse/mlir-*whl
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
         
-        if [ x"${{ matrix.OS }}" == x"ubuntu-22.04" ] && [ x"${{ matrix.ARCH }}" == x"aarch64" ]; then
+        if [ x"${{ matrix.ARCH }}" == x"aarch64" ]; then
           rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
         fi
 
@@ -438,7 +439,7 @@ jobs:
           unzip -j wheelhouse/mlir-*whl "mlir/bin/$TOOL" -d native_tools/
         done
         
-        if [ x"${{ matrix.OS }}" == x"ubuntu-22.04" ]; then
+        if [ x"${{ matrix.OS }}" == x"ubuntu-22.04" ] || [ x"${{ matrix.OS }}" == x"ubuntu-20.04" ]; then
           PLAT="linux"
         elif [ "${{ contains(matrix.OS, 'macos') }}" == "true" ]; then
           PLAT="macosx_12_0"
@@ -497,7 +498,7 @@ jobs:
       id-token: write
 
     # DON'T FORGET TO CHANGE THIS IF YOU UPDATE WHEELS.YML
-    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@makslevental/ubuntu22
+    uses: makslevental/mlir-wheels/.github/workflows/wheels.yml@main
     secrets: inherit # pass all secrets
     with:
       MLIR_WHEEL_VERSION: ${{ needs.build.outputs.MLIR_WHEEL_VERSION }}
