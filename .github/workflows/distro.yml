@@ -155,7 +155,7 @@ jobs:
           - OS: ubuntu-22.04
             ARCH: wasm32
 
-          - OS: ubuntu-22.04
+          - OS: ubuntu-20.04
             ARCH: aarch64
 
 #          - OS: ubuntu-22.04
