@@ -1,6 +1,6 @@
 include(CMakePrintHelpers)
 
-set(LLVM_ENABLE_PROJECTS "llvm;mlir;clang;lld" CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS "llvm;mlir" CACHE STRING "")
 
 set(CMAKE_POLICY_DEFAULT_CMP0175 OLD CACHE STRING "")
 

@@ -23,7 +23,7 @@ export APPLY_PATCHES=true
 export DEBUG_CI_FAST_BUILD=false
 
 if [ "$machine" == "linux" ]; then
-  export MATRIX_OS=ubuntu-20.04
+  export MATRIX_OS=ubuntu-22.04
   export CIBW_ARCHS=x86_64
   export CIBW_BUILD=cp311-manylinux_x86_64
   export ARCH=x86_64
@@ -65,7 +65,7 @@ for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "
   unzip -j "$HERE/../wheelhouse/"mlir-*whl "mlir/bin/$TOOL" -d "$HERE/../native_tools/"
 done
 
-if [ x"$MATRIX_OS" == x"ubuntu-20.04" ]; then
+if [ x"$MATRIX_OS" == x"ubuntu-22.04" ]; then
   PLAT="manylinux_2_17"
 elif [ x"$MATRIX_OS" == x"macos-13" ]; then
   PLAT="macosx_12_0"
