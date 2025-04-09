@@ -155,7 +155,7 @@ jobs:
           # - OS: ubuntu-22.04
           #   ARCH: wasm32
 
-          - OS: ubuntu-20.04
+          - OS: ubuntu-22.04
             ARCH: aarch64
 
 #           unsupported GNU version! gcc versions later than 13 are not supported! The nvcc flag '-allow-unsupported-compiler' can be used to override this version check; however, using an unsupported host compiler may cause compilation failure or incorrect run time execution. Use at your own risk.
