@@ -184,7 +184,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "--plat":
     if os.getenv("CIBW_ARCHS") == "x86_64":
         print("manylinux_2_28_x86_64")
     elif os.getenv("CIBW_ARCHS") == "aarch64":
-        print("manylinux_2_28_aarch64")
+        print("manylinux_2_34_aarch64")
     else:
         raise NotImplementedError
     exit()
