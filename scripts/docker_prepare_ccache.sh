@@ -2,7 +2,7 @@
 set -xe
 
 # manylinux prep
-if [[ -f "/etc/centos-release" ]]; then
+if [[ -f "/etc/centos-release" ]] || [[ -f "/etc/almalinux-release" ]]; then
   yum install -y epel-release
   # sometimes the epel server is down. retry 5 times
   for i in $(seq 1 5); do
