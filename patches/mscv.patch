@@ -1,15 +1,13 @@
 diff --git a/cmake/Modules/CMakePolicy.cmake b/cmake/Modules/CMakePolicy.cmake
-index 1c18c1810dae..a13f4ad1fcb2 100644
+index 421f5a4dda6c..586494e9ea99 100644
 --- a/cmake/Modules/CMakePolicy.cmake
 +++ b/cmake/Modules/CMakePolicy.cmake
-@@ -11,6 +11,10 @@ if(POLICY CMP0116)
-   cmake_policy(SET CMP0116 OLD)
+@@ -41,3 +41,7 @@ if(POLICY CMP0156)
+     cmake_policy(SET CMP0179 NEW)
+   endif()
  endif()
- 
++
 +if(POLICY CMP0091)
 +  cmake_policy(SET CMP0091 NEW)
 +endif()
-+
- # MSVC debug information format flags are selected via
- # CMAKE_MSVC_DEBUG_INFORMATION_FORMAT, instead of
- # embedding flags in e.g. CMAKE_CXX_FLAGS_RELEASE.
+\ No newline at end of file
