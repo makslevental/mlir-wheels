@@ -345,7 +345,7 @@ jobs:
         -DLLVM_ENABLE_LIBPFM="OFF" 
         -DLLVM_ENABLE_ZLIB="OFF" 
         -DLLVM_ENABLE_ZSTD="OFF" 
-        -DLLVM_ENABLE_PROJECTS="mlir;llvm" 
+        -DLLVM_ENABLE_PROJECTS="mlir;llvm;lld" 
         -DCMAKE_BUILD_TYPE="Release" 
         -DLLVM_TARGETS_TO_BUILD="WebAssembly" 
         -DLLVM_TARGET_ARCH="wasm32-wasi" 
