@@ -64,9 +64,22 @@ class CMakeBuild(build_ext):
             f"-DRUN_TESTS={RUN_TESTS}",
         ]
 
+        gcc_12 = "/opt/rh/gcc-toolset-12/root/usr/bin/gcc"
+        gpp_12 = "/opt/rh/gcc-toolset-12/root/usr/bin/g++"
+        if BUILD_CUDA :
+            if Path(gcc_12).exists():
+                cmake_args.append(f"-DCMAKE_C_COMPILER={gcc_12}")
+                os.environ["CC"] = gcc_12
+                os.environ["NVCC_CCBIN"] = gcc_12
+            if Path(gpp_12).exists():
+                cmake_args.append(f"-DCMAKE_CXX_COMPILER={gpp_12}")
+                os.environ["CXX"] = gpp_12
+
         # workaround for Could NOT find Python (missing: Python_INCLUDE_DIRS Development on aarch64
         if platform.system() == "Linux":
-            cmake_args += [f"-DPython_INCLUDE_DIR={get_paths()['include']}",]
+            cmake_args += [
+                f"-DPython_INCLUDE_DIR={get_paths()['include']}",
+            ]
 
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [os.environ["CMAKE_ARGS"]]
@@ -232,5 +245,5 @@ setup(
     ext_modules=[CMakeExtension("mlir", sourcedir="llvm-project/llvm")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    download_url=llvm_url
+    download_url=llvm_url,
 )
