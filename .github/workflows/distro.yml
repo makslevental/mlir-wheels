@@ -11,7 +11,7 @@ on:
       DEBUG_OS:
         description: 'which runner os to run the tmate action in (if the tmate action is run)'
         type: string
-        default: 'windows-2019'
+        default: 'windows-2022'
         required: false
       DEBUG_ARCH:
         description: 'which runner arch to run the tmate action in (if the tmate action is run)'
@@ -174,7 +174,7 @@ jobs:
 #            ARCH: x86_64
 #            BUILD_OPENMP: true
 
-          - OS: windows-2019
+          - OS: windows-2022
             ARCH: AMD64
 
           - OS: macos-13
@@ -418,7 +418,7 @@ jobs:
     # git-bash doesn't have rename
     - name: rename windows
       shell: pwsh
-      if: ${{ matrix.OS == 'windows-2019' }}
+      if: ${{ matrix.OS == 'windows-2022' }}
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
@@ -432,7 +432,7 @@ jobs:
       run: |
         
         for TOOL in "llvm-tblgen" "mlir-tblgen" "mlir-linalg-ods-yaml-gen" "mlir-pdll" "llvm-config" "FileCheck"; do
-          if [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
+          if [ x"${{ matrix.OS }}" == x"windows-2022" ]; then
             TOOL="$TOOL.exe"
           fi
           unzip -j wheelhouse/mlir-*whl "mlir/bin/$TOOL" -d native_tools/
@@ -442,7 +442,7 @@ jobs:
           PLAT="linux"
         elif [ "${{ contains(matrix.OS, 'macos') }}" == "true" ]; then
           PLAT="macosx_12_0"
-        elif [ x"${{ matrix.OS }}" == x"windows-2019" ]; then
+        elif [ x"${{ matrix.OS }}" == x"windows-2022" ]; then
           PLAT="win"
         fi
         
