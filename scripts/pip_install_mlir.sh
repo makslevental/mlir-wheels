@@ -39,3 +39,4 @@ fi
 
 unzip -q mlir-*.whl
 rm -rf mlir-*.whl
+export MLIR_INSTALL_ABS_PATH="$PWD/mlir"
