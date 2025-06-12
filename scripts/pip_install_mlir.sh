@@ -32,7 +32,7 @@ if [ x"$CIBW_ARCHS" == x"arm64" ] || [ x"$CIBW_ARCHS" == x"aarch64" ]; then
   elif [ x"$MATRIX_OS" == x"ubuntu-20.04" ] || [ x"$MATRIX_OS" == x"ubuntu-22.04" ] || [ x"$MATRIX_OS" == x"ubuntu-22.04-arm" ]; then
     PLAT=linux_aarch64
   fi
-  pip download mlir$MLIR_WHEEL_VERSION --platform $PLAT
+  pip download mlir$MLIR_WHEEL_VERSION --platform $PLAT --only-binary=:all:
 else
   pip download mlir$MLIR_WHEEL_VERSION 
 fi
