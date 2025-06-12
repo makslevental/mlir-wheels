@@ -190,7 +190,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "--plat":
 
 BUILD_CUDA = check_env("BUILD_CUDA")
 
-version = version("mlir")
+version = os.getenv("MLIR_WHEEL_VERSION")
 
 _datetime, commit_hash = version.split("+")
 now = datetime.now()
