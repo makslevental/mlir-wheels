@@ -1,4 +1,4 @@
-setuptools>=42
+setuptools<=74
 wheel
 ninja
 cmake>=3.12
