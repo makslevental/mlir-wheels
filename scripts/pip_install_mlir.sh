@@ -32,7 +32,10 @@ if [ x"$CIBW_ARCHS" == x"arm64" ] || [ x"$CIBW_ARCHS" == x"aarch64" ]; then
   elif [ x"$MATRIX_OS" == x"ubuntu-20.04" ] || [ x"$MATRIX_OS" == x"ubuntu-22.04" ] || [ x"$MATRIX_OS" == x"ubuntu-22.04-arm" ]; then
     PLAT=linux_aarch64
   fi
-  pip install mlir$MLIR_WHEEL_VERSION --platform $PLAT --only-binary=:all: --target $SITE_PACKAGES --no-deps --force -U
+  pip download mlir$MLIR_WHEEL_VERSION --platform $PLAT
 else
-  pip install mlir$MLIR_WHEEL_VERSION --force -U
+  pip download mlir$MLIR_WHEEL_VERSION 
 fi
+
+unzip -q mlir-*.whl
+rm -rf mlir-*.whl
