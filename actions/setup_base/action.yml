@@ -91,7 +91,7 @@ runs:
 
     - name: pip install standard tools
       shell: bash
-      run: pip install cibuildwheel<3 wheel
+      run: pip install "cibuildwheel==2.23.3" wheel
 
     - name: install rename
       if: ${{ contains(inputs.MATRIX_OS, 'ubuntu') || contains(inputs.MATRIX_OS, 'macos') }}
