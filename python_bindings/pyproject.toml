@@ -13,7 +13,7 @@ manylinux-aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64"
 manylinux-x86_64-image = "sameli/manylinux_2_28_x86_64_cuda_12.3"
 
 [tool.cibuildwheel.linux]
-build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
 skip = ["*-manylinux_i686", "*-musllinux*"]
 environment-pass = [
     "BUILD_CUDA",
