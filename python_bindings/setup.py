@@ -63,9 +63,8 @@ class CMakeBuild(build_ext):
         cfg = "Release"
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
-        import mlir
 
-        MLIR_INSTALL_ABS_PATH = Path(mlir.__path__[0])
+        MLIR_INSTALL_ABS_PATH = os.environ.get("MLIR_INSTALL_ABS_PATH", "mlir")
         if platform.system() == "Windows":
             # fatal error LNK1170: line in command file contains 131071 or more characters
             if Path("/tmp/m").exists():
