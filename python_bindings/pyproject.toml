@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools<=64.0.0", "wheel", "pip"]
+build-backend = "setuptools.build_meta"
+
 [tool.cibuildwheel]
 environment = { PIP_FIND_LINKS = "wheelhouse https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest", PIP_NO_BUILD_ISOLATION = "false" }
 build-verbosity = 3
