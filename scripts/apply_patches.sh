@@ -6,6 +6,7 @@ PATCHES="\
 add_td_to_mlirpythoncapi_headers \
 mscv \
 remove_openmp_dep_on_clang_and_export_async_symbols \
+pyproject.patch \
 "
 
 if [ x"$CIBW_ARCHS" == x"wasm32" ]; then
