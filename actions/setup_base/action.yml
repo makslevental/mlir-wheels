@@ -73,9 +73,9 @@ runs:
         large-packages: true
         swap-storage: false # This frees space on the wrong partition.
 
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.12'
 
     - name: Install Ninja
       uses: llvm/actions/install-ninja@6a57890d0e3f9f35dfc72e7e48bc5e1e527cdd6c # Jan 17
@@ -91,7 +91,7 @@ runs:
 
     - name: pip install standard tools
       shell: bash
-      run: pip install "cibuildwheel==2.23.3" wheel
+      run: pip install "cibuildwheel==2.23.3" wheel setuptools
 
     - name: install rename
       if: ${{ contains(inputs.MATRIX_OS, 'ubuntu') || contains(inputs.MATRIX_OS, 'macos') }}
@@ -141,4 +141,5 @@ runs:
       if: contains(inputs.MATRIX_OS, 'ubuntu')
       shell: bash
       run: |
+        
         docker system prune -a -f

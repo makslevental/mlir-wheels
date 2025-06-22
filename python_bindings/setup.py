@@ -192,8 +192,9 @@ if len(sys.argv) > 1 and sys.argv[1] == "--plat":
 BUILD_CUDA = check_env("BUILD_CUDA")
 
 version = version("mlir")
-
 _datetime, commit_hash = version.split("+")
+if not bool(int(os.getenv("USE_LOCAL_VERSION", True) or 1)):
+    version = _datetime
 now = datetime.now()
 commit_hash = commit_hash.rsplit(".", 1)[-1]
 llvm_url = f"https://github.com/llvm/llvm-project/commit/{commit_hash}"
