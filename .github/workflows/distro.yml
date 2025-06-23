@@ -380,6 +380,7 @@ jobs:
         
         rename 's/cp310-cp310/py3-none/' wheelhouse/mlir-*whl
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
+        rename 's/cp312-cp312/py3-none/' wheelhouse/mlir-*whl
         
         if [ x"${{ matrix.ARCH }}" == x"aarch64" ]; then
           rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
@@ -394,7 +395,8 @@ jobs:
         
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp310-cp310', 'py3-none' }
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
-
+        ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp312-cp312', 'py3-none' }
+        
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       id: build_native_tools_wheel
