@@ -10,7 +10,7 @@ on:
         default: ''
       USE_LOCAL_VERSION:
         description: 'use local version for wheel'
-        type: number
+        type: string
         default: 1
   workflow_call:
     inputs:
@@ -132,7 +132,7 @@ jobs:
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
           MATRIX_OS=${{ matrix.OS }} \
           MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
-          USE_LOCAL_VERSION=${{ inputs.USE_LOCAL_VERSION && inputs.USE_LOCAL_VERSION || 1 }} \
+          USE_LOCAL_VERSION=${{ inputs.USE_LOCAL_VERSION != '' && inputs.USE_LOCAL_VERSION || 1 }} \
           cibuildwheel --output-dir ../wheelhouse
           
           popd
@@ -218,7 +218,7 @@ jobs:
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
           MATRIX_OS=${{ matrix.OS }} \
           MLIR_WHEEL_VERSION=${{ inputs.MLIR_WHEEL_VERSION }} \
-          USE_LOCAL_VERSION=${{ inputs.USE_LOCAL_VERSION && inputs.USE_LOCAL_VERSION || 1 }} \
+          USE_LOCAL_VERSION=${{ inputs.USE_LOCAL_VERSION != '' && inputs.USE_LOCAL_VERSION || 1 }} \
           cibuildwheel --output-dir ../wheelhouse
           
           popd
