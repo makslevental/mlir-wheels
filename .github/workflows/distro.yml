@@ -152,8 +152,8 @@ jobs:
           - OS: ubuntu-22.04
             ARCH: x86_64
 
-          # - OS: ubuntu-22.04
-          #   ARCH: wasm32
+          - OS: ubuntu-22.04
+            ARCH: wasm32
 
           - OS: ubuntu-22.04
             ARCH: aarch64
@@ -302,70 +302,40 @@ jobs:
         export RUN_TESTS=0
         pip wheel . -v -w wheelhouse
 
+    - name: install pyodide
+      if: contains(matrix.ARCH, 'wasm')
+      run: |
+        pip install pyodide-build>=0.28.0
+        echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
+
     - name: Setup Emscripten
       if: contains(matrix.ARCH, 'wasm')
       uses: mymindstorm/setup-emsdk@v14
       with:
-        version: 3.1.60
+        version: ${{ env.EMSCRIPTEN_VERSION }}
 
-    - name: build wasm ubuntu wheel
+    - name: build wasm python wheel
       if: contains(matrix.ARCH, 'wasm')
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       run: |
         
         ./scripts/apply_patches.sh
-        $EMSDK/emsdk activate 3.1.60
-        source $EMSDK/emsdk_env.sh
+        pip download  mlir_native_tools -f https://makslevental.github.io/wheels
+        unzip -j mlir_native_tools-*whl -d mlir_native_tools
+        rm -rf mlir_native_tools-*whl
+        
+        export LLVM_NATIVE_TOOL_DIR="$PWD/mlir_native_tools"
+        export LLVM_TABLEGEN="$PWD/mlir_native_tools/llvm-tblgen"
+        export MLIR_TABLEGEN="$PWD/mlir_native_tools/mlir-tblgen"
+        export MLIR_LINALG_ODS_YAML_GEN="$PWD/mlir_native_tools/mlir-linalg-ods-yaml-gen"
+        pyodide build pywasm -o wheelhouse --compression-level 10
 
-    - name: build wasm ubuntu wheel
+    - name: Upload wasm32 wheels
       if: contains(matrix.ARCH, 'wasm')
-      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      # [scalar content] can be written with the folded style (denoted by “>”)
-      # where each line break is folded to a space unless it ends an empty or a more-indented line.
-      run: >-
-        cmake -G Ninja
-        -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake 
-        -DLLVM_BUILD_TOOLS="OFF" 
-        -DLLVM_INCLUDE_UTILS="OFF" 
-        -DLLVM_INCLUDE_EXAMPLES="OFF" 
-        -DLLVM_INCLUDE_TESTS="OFF" 
-        -DLLVM_INCLUDE_BENCHMARKS="OFF" 
-        -DLLVM_ENABLE_BINDINGS="OFF" 
-        -DLLVM_BUILD_DOCS="OFF" 
-        -DLLVM_ENABLE_OCAMLDOC="OFF" 
-        -DLLVM_ENABLE_THREADS="OFF" 
-        -DLLVM_ENABLE_BACKTRACES="OFF" 
-        -DLLVM_ENABLE_PIC="OFF" 
-        -DLLVM_ENABLE_UNWIND_TABLES="OFF" 
-        -DLLVM_ENABLE_CRASH_OVERRIDES="OFF" 
-        -DLLVM_ENABLE_TERMINFO="OFF" 
-        -DLLVM_ENABLE_LIBXML2="OFF" 
-        -DLLVM_ENABLE_LIBEDIT="OFF" 
-        -DLLVM_ENABLE_LIBPFM="OFF" 
-        -DLLVM_ENABLE_ZLIB="OFF" 
-        -DLLVM_ENABLE_ZSTD="OFF" 
-        -DLLVM_ENABLE_PROJECTS="mlir;llvm;lld" 
-        -DCMAKE_BUILD_TYPE="Release" 
-        -DLLVM_TARGETS_TO_BUILD="WebAssembly" 
-        -DLLVM_TARGET_ARCH="wasm32-wasi" 
-        -DLLVM_DEFAULT_TARGET_TRIPLE="wasm32-wasi" 
-        -DLLVM_HAVE_LIBXAR="OFF" 
-        -DCMAKE_SYSTEM_NAME=Emscripten 
-        -DLLVM_HOST_TRIPLE=x86_64-unknown-linux-gnu 
-        -DCROSS_TOOLCHAIN_FLAGS_NATIVE="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
-        -DCMAKE_EXE_LINKER_FLAGS="-sSTANDALONE_WASM=1 -sWASM=1 -sWASM_BIGINT=1 -sEXPORT_ALL=1 -sMODULARIZE=1 -sEXPORT_NAME=MLIRModule -sEXPORTED_RUNTIME_METHODS=cwrap,ccall,getValue,setValue,writeAsciiToMemory,wasmTable --minify 0 -lembind"
-        -B$PWD/build_mlir_wasm 
-        -S$PWD/llvm-project/llvm
-        
-    - name: build wasm ubuntu wheel
-      if: contains(matrix.ARCH, 'wasm')
-      working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
-      run: |
-        
-        cmake --build build_mlir_wasm --target mlir-opt
-        mkdir wheelhouse
-        zip wheelhouse/mlir_wasm-$(python setup.py --mlir-version).zip build_mlir_wasm/bin/*.js build_mlir_wasm/bin/*.wasm -v
-        rm -rf build_mlir_wasm
+      uses: actions/upload-artifact@v4
+      with:
+        path: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}/wheelhouse/*.whl
+        name: build_artifact_python_bindings-${{ matrix.OS }}-${{ matrix.ARCH }}
 
     - name: Clean llvm-project
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
@@ -410,6 +380,7 @@ jobs:
         
         rename 's/cp310-cp310/py3-none/' wheelhouse/mlir-*whl
         rename 's/cp311-cp311/py3-none/' wheelhouse/mlir-*whl
+        rename 's/cp312-cp312/py3-none/' wheelhouse/mlir-*whl
         
         if [ x"${{ matrix.ARCH }}" == x"aarch64" ]; then
           rename 's/x86_64/aarch64/' wheelhouse/mlir-*whl
@@ -424,7 +395,8 @@ jobs:
         
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp310-cp310', 'py3-none' }
         ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp311-cp311', 'py3-none' }
-
+        ls wheelhouse/mlir-*whl | Rename-Item -NewName {$_ -replace 'cp312-cp312', 'py3-none' }
+        
     - name: Build native_tools wheel
       working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
       id: build_native_tools_wheel
@@ -485,6 +457,36 @@ jobs:
         allowUpdates: true
         replacesArtifacts: true
         makeLatest: true
+
+#  upload_pypi:
+#
+#    if: github.event_name != 'pull_request'
+#
+#    needs: [build]
+#
+#    runs-on: ubuntu-latest
+#
+#    environment: pypi
+#
+#    permissions:
+#      id-token: write
+#
+#    steps:
+#
+#      - uses: actions/download-artifact@v4
+#        with:
+#          pattern: build_artifact_python_bindings-ubuntu-22.04-wasm32
+#          path: dist
+#          merge-multiple: true
+#
+#      - uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          repository-url: https://test.pypi.org/legacy/
+#          user: __token__
+#          password: ${{ secrets.TEST_PYPI_PASSWORD }}
+#          skip-existing: false
+#          verbose: true
+#          verify-metadata: false
 
   call-build-python-bindings:
 
