@@ -120,6 +120,8 @@ jobs:
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
           
+          pip install cibuildwheel==3.0.1
+          
           cp -R scripts python_bindings/scripts
           pushd python_bindings
           
@@ -206,6 +208,8 @@ jobs:
         working-directory: ${{ steps.setup_base.outputs.WORKSPACE_ROOT }}
         run: |
           
+          pip install cibuildwheel==3.0.1
+          
           cp -R scripts python_bindings/scripts
           pushd python_bindings
           
@@ -255,23 +259,19 @@ jobs:
 
     needs: [build, build-linux-aarch64]
 
-    runs-on: ${{ matrix.OS }}
+    runs-on: ${{ matrix.runs-on }}
 
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - OS: ubuntu-22.04
-            ARCH: x86_64
-
-          - OS: windows-2022
-            ARCH: AMD64
-
-          - OS: macos-13
-            ARCH: x86_64
-
-          - OS: macos-14
-            ARCH: arm64
+        runs-on: [ "ubuntu-22.04", "windows-2022", "macos-14", "macos-13" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        include: [
+          { runs-on: "ubuntu-22.04", arch: "x86_64" },
+          { runs-on: "windows-2022", arch: "AMD64" },
+          { runs-on: "macos-13", arch: "x86_64" },
+          { runs-on: "macos-14", arch: "arm64" },
+        ]
 
     defaults:
       run:
@@ -290,7 +290,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: build_artifact_python_bindings-${{ matrix.OS }}-${{ matrix.ARCH }}-
+          name: build_artifact_python_bindings-${{ matrix.runs-on }}-${{ matrix.arch }}-
           path: wheelhouse
           merge-multiple: true
 

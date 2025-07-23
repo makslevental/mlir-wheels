@@ -1,4 +1,20 @@
+[build-system]
+# this doesn't actually do anything because we do CIBW_BUILD_FRONTEND="pip; args: --no-build-isolation"
+requires = [
+    "PyYAML>=6.0.2",
+    "cmake>=3.12",
+    "nanobind>=2.2.0",
+    "ninja",
+    "pybind11>=2.10.0, <=2.13.6",
+    "setuptools",
+    "typing_extensions==4.12.2",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
 [tool.cibuildwheel]
+enable = "cpython-prerelease"
+build-frontend = "pip; args: --no-build-isolation"
 environment = { PIP_FIND_LINKS = "wheelhouse https://github.com/makslevental/mlir-wheels/releases/expanded_assets/latest", PIP_NO_BUILD_ISOLATION = "false" }
 build-verbosity = 3
 before-all = [
@@ -6,10 +22,10 @@ before-all = [
     "rm -rf *egg*",
 ]
 manylinux-aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64"
-manylinux-x86_64-image = "sameli/manylinux_2_28_x86_64_cuda_12.3"
+manylinux-x86_64-image = "ghcr.io/makslevental/manylinux_2_28_x86_64_cuda_12.3"
 
 [tool.cibuildwheel.linux]
-build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 skip = ["*-manylinux_i686", "*-musllinux*"]
 environment-pass = [
     "BUILD_CUDA",
@@ -22,12 +38,13 @@ environment-pass = [
     "LLVM_PROJECT_COMMIT",
     "MATRIX_OS",
     "MLIR_WHEEL_VERSION",
+    "MLIR_INSTALL_ABS_PATH",
     "PIP_FIND_LINKS",
     "PIP_NO_BUILD_ISOLATION",
 ]
 before-build = [
+    "pip install -r build-requirements.txt",
     "{project}/scripts/docker_prepare_ccache.sh",
-    "pip install -r requirements.txt",
     "{project}/scripts/pip_install_mlir.sh",
 ]
 repair-wheel-command = [
@@ -39,9 +56,9 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.macos]
-build = "cp310-* cp311-* cp312-* cp313-*"
+build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
 before-build = [
-    "pip install -r requirements.txt",
+    "pip install -r build-requirements.txt",
     "{project}/scripts/pip_install_mlir.sh",
 ]
 # DYLD_LIBRARY_PATH doesn't work because eg dep on libLLVM is set to @loader_path/libLLVM and
@@ -62,10 +79,10 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.windows]
-build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 before-build = [
+    "pip install -r build-requirements.txt",
     "pip install delvewheel",
-    "pip install -r requirements.txt",
     "bash {project}\\scripts\\pip_install_mlir.sh",
 ]
 #repair-wheel-command = 'delvewheel repair -v -w {dest_dir} {wheel} --no-dll mlirpythoncapi.dll'
