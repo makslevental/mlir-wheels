@@ -130,6 +130,7 @@ jobs:
           BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
           BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
           CIBW_ARCHS=${{ matrix.ARCH }} \
+          CIBW_BUILD_FRONTEND="pip; args: --no-build-isolation" \
           CMAKE_GENERATOR=Ninja \
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
           MATRIX_OS=${{ matrix.OS }} \
@@ -218,6 +219,7 @@ jobs:
           BUILD_OPENMP=${{ matrix.BUILD_OPENMP }} \
           BUILD_VULKAN=${{ matrix.BUILD_VULKAN }} \
           CIBW_ARCHS=${{ matrix.ARCH }} \
+          CIBW_BUILD_FRONTEND="pip; args: --no-build-isolation" \
           CMAKE_GENERATOR=Ninja \
           HOST_CCACHE_DIR="$(ccache --get-config cache_dir)" \
           MATRIX_OS=${{ matrix.OS }} \
