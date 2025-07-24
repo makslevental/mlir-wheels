@@ -1,5 +1,6 @@
 import glob
 import os
+from pip._internal.req import parse_requirements
 import platform
 import re
 import shutil
@@ -65,7 +66,7 @@ class CMakeBuild(build_ext):
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
         import mlir
 
-        MLIR_INSTALL_ABS_PATH = Path(mlir.__path__[0])
+        MLIR_INSTALL_ABS_PATH = os.environ.get("MLIR_INSTALL_ABS_PATH", Path(mlir.__path__[0]))
         if platform.system() == "Windows":
             # fatal error LNK1170: line in command file contains 131071 or more characters
             if Path("/tmp/m").exists():
@@ -180,6 +181,11 @@ class CMakeBuild(build_ext):
         )
 
 
+def load_requirements(fname):
+    reqs = parse_requirements(fname, session="hack")
+    return [str(ir.requirement) for ir in reqs]
+
+
 if len(sys.argv) > 1 and sys.argv[1] == "--plat":
     if os.getenv("CIBW_ARCHS") == "x86_64":
         print("manylinux_2_28_x86_64")
@@ -202,6 +208,7 @@ setup(
     version=version,
     author="",
     name="mlir-python-bindings",
+    install_requires=load_requirements("requirements.txt"),
     include_package_data=True,
     author_email="maksim.levental@gmail.com",
     description=f"MLIR Python bindings. Created at {now} build of {llvm_url}",

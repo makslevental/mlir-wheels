@@ -1,0 +1,9 @@
+setuptools>=42
+wheel
+ninja
+cmake>=3.12
+pybind11[global]>=2.10.4
+nanobind
+# on 3.13 and 3.14 this is built from scratch and in a cibuildwheel venv there's no setuptools
+# https://github.com/pypa/cibuildwheel/blob/e2e24882d8422e974295b1b9079d4ce80a5098a4/cibuildwheel/venv.py#L116
+# PyYAML>=5.4.0, <=6.0.1
