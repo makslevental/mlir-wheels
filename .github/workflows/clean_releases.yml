@@ -5,8 +5,8 @@ on:
     branches:
       - main
   schedule:
-    # At minute 0 past hour 6. (see https://crontab.guru)
-    - cron: '00 06 * * *'
+    # At minute 0 past hour 0. (see https://crontab.guru)
+    - cron: '00 00 * * *'
 
 jobs:
 
