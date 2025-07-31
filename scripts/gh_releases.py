@@ -10,7 +10,7 @@ from github import Auth
 # using an access token
 auth = Auth.Token(os.environ["GITHUB_TOKEN"])
 
-onemonthago = datetime.date.today() - datetime.timedelta(days=15)
+onemonthago = datetime.date.today() - datetime.timedelta(days=16)
 
 # First create a Github instance:
 
