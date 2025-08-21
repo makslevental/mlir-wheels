@@ -96,6 +96,7 @@ class CMakeBuild(build_ext):
             "-DCMAKE_VISIBILITY_INLINES_HIDDEN=ON",
             "-DCMAKE_C_VISIBILITY_PRESET=hidden",
             "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
+            "-DCMAKE_VERBOSE_MAKEFILE=ON",
         ]
         if platform.system() == "Windows":
             cmake_args += [

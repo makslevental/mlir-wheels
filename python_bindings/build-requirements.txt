@@ -1,6 +1,7 @@
 setuptools>=42
 wheel
-ninja
+# LINK : fatal error LNK1181: cannot open input file 'MLIRCAPIRegisterEverything\RegisterEverything.cpp.obj'
+ninja==1.11.1.4
 cmake>=3.12
 pybind11[global]>=2.10.4
 nanobind
