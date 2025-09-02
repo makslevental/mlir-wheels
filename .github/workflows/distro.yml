@@ -72,6 +72,14 @@ on:
       # At minute 0 past every 4th hour. (see https://crontab.guru)
     - cron: '0 */4 * * *'
 
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
 
   get_llvm_project_commit:
