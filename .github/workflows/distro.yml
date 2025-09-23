@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      LLVM_PROJECT_COMMIT: c5078484
+      LLVM_PROJECT_COMMIT: c5078484ff8cf35c369832d903d363c3019ef3e1
       # LLVM_PROJECT_COMMIT: ${{ steps.get_llvm_project_commit.outputs.LLVM_PROJECT_COMMIT }}
       DATETIME: ${{ steps.get_llvm_project_commit.outputs.DATETIME }}
 
