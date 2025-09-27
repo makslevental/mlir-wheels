@@ -1,8 +1,8 @@
 diff --git a/mlir/lib/ExecutionEngine/CMakeLists.txt b/mlir/lib/ExecutionEngine/CMakeLists.txt
-index fe139661f2bb..0b93a3e264ae 100644
+index fdeb4dacf927..aa17a07f4638 100644
 --- a/mlir/lib/ExecutionEngine/CMakeLists.txt
 +++ b/mlir/lib/ExecutionEngine/CMakeLists.txt
-@@ -169,13 +169,13 @@ if(LLVM_ENABLE_PIC)
+@@ -204,13 +204,13 @@ if(LLVM_ENABLE_PIC)
      LINK_LIBS PUBLIC
      ${LLVM_PTHREAD_LIB}
    )
@@ -19,17 +19,18 @@ index fe139661f2bb..0b93a3e264ae 100644
  
    add_mlir_library(mlir_arm_sme_abi_stubs
 diff --git a/openmp/CMakeLists.txt b/openmp/CMakeLists.txt
-index 13e65bf70b5b..78c5e5cd599d 100644
+index 88be8c75abfe..8559779ef882 100644
 --- a/openmp/CMakeLists.txt
 +++ b/openmp/CMakeLists.txt
-@@ -148,4 +148,4 @@ add_subdirectory(libompd)
- add_subdirectory(docs)
+@@ -170,5 +170,5 @@ else()
+   add_subdirectory(docs)
  
- # Now that we have seen all testsuites, create the check-openmp target.
--construct_check_openmp_target()
-+#construct_check_openmp_target()
+   # Now that we have seen all testsuites, create the check-openmp target.
+-  construct_check_openmp_target()
++#  construct_check_openmp_target()
+ endif()
 diff --git a/openmp/cmake/OpenMPTesting.cmake b/openmp/cmake/OpenMPTesting.cmake
-index a771efdf9e69..88d04ebd2b8d 100644
+index 60280b7ed489..df954deee0f3 100644
 --- a/openmp/cmake/OpenMPTesting.cmake
 +++ b/openmp/cmake/OpenMPTesting.cmake
 @@ -1,5 +1,5 @@

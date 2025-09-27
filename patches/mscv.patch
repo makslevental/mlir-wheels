@@ -1,10 +1,10 @@
 diff --git a/cmake/Modules/CMakePolicy.cmake b/cmake/Modules/CMakePolicy.cmake
-index 421f5a4dda6c..586494e9ea99 100644
+index cf986331707b..1700f787be6f 100644
 --- a/cmake/Modules/CMakePolicy.cmake
 +++ b/cmake/Modules/CMakePolicy.cmake
-@@ -41,3 +41,7 @@ if(POLICY CMP0156)
-     cmake_policy(SET CMP0179 NEW)
-   endif()
+@@ -47,3 +47,7 @@ endif()
+ if(POLICY CMP0182)
+   cmake_policy(SET CMP0182 NEW)
  endif()
 +
 +if(POLICY CMP0091)

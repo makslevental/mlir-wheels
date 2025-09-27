@@ -9,6 +9,7 @@ requires = [
     "dataclasses",
     "PyYAML",
     "nanobind",
+    "typing_extensions",
 ]
 build-backend = "setuptools.build_meta"
 
