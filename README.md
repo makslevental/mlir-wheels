@@ -1,3 +1,7 @@
+# All work has migrated to https://github.com/llvm/eudsl
+
+# See [https://github.com/llvm/eudsl/projects/mlir-wheel](https://github.com/llvm/eudsl/tree/8b1ffd0b1c40b7084208c164f30b68dd0ca77a59/projects/mlir-wheel)
+
 # MLIR distribution as (`manylinux`-compatible) wheel
 
 What's this? It's a means to getting a distribution of MLIR like this:
